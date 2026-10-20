@@ -120,6 +120,22 @@ body.walking #brand,body.walking #dock,body.walking #floors,body.walking #search
 #tcText{font-size:14px;font-weight:700}
 #tcWin{aspect-ratio:16/10;border:3px solid #0f6e3d;border-top:0;border-radius:0 0 12px 12px}
 @media (max-height:520px){ #turnCard{top:60px;width:min(240px,34vw)} #tcDist{font-size:16px} }
+#gearBtn{position:absolute;right:16px;top:12px;z-index:6;width:42px;height:42px;padding:0;font-size:20px;line-height:42px;text-align:center;cursor:pointer;color:var(--ink)}
+#top{right:68px!important}
+body.walking #gearBtn{display:none}
+#gearBox{position:fixed;inset:0;z-index:21;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(10,20,30,.45)}
+#gearBox[hidden]{display:none}
+#gearBox .gear-in{width:min(380px,100%);max-height:100%;overflow:auto;box-sizing:border-box;padding:16px;display:flex;flex-direction:column;gap:14px}
+#gearBox .gear-hd{display:flex;align-items:center;justify-content:space-between}
+#gearBox h2{margin:0;font-size:19px} #gearBox h3{margin:0 0 6px;font-size:14px;color:var(--muted);font-weight:600}
+#gearBox .seg{display:flex;gap:6px} #gearBox .seg button{flex:1;padding:9px 6px;border-radius:8px;border:1px solid var(--line);background:var(--chip);color:var(--ink);font-size:14px;cursor:pointer}
+#gearBox .seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:transparent;font-weight:700}
+#gearBox .hint{margin:6px 0 0;font-size:12px;color:var(--muted);line-height:1.5}
+#gearBox details{border-top:1px solid var(--line);padding-top:10px} #gearBox summary{cursor:pointer;font-weight:700;font-size:15px}
+#gearBox .adv[hidden]{display:none} #gearBox .adv{display:flex;flex-direction:column;gap:2px;margin-top:8px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--chip);color:var(--ink);text-decoration:none}
+#gearBox .adv span{font-size:12px;color:var(--muted);line-height:1.4} #gearBox .adv[aria-disabled="true"]{opacity:.45;pointer-events:none}
+#gearBox .soon{opacity:.8}
+@media (max-width:640px){ #gearBtn{top:8px;right:8px;width:38px;height:38px;line-height:38px} #top{right:54px!important} }
 #qrBox{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(10,20,30,.55)}
 #qrBox .qr-in{width:min(420px,100%);max-height:100%;overflow:auto;box-sizing:border-box;padding:18px;display:flex;flex-direction:column;gap:10px;align-items:center;text-align:center}
 #qrBox h2{margin:0;font-size:20px;text-wrap:balance}
@@ -154,7 +170,7 @@ body.walking #brand,body.walking #dock,body.walking #floors,body.walking #search
 <div id="labels"></div>
 
 <div id="top">
-  <div id="brand" class="panel"><b>CAMPUS 3D v1.38 外賓版</b><span>新北市立中正國中・115 學年度教室位置</span></div>
+  <div id="brand" class="panel"><b>CAMPUS 3D v1.40 外賓版</b><span>新北市立中正國中・115 學年度教室位置</span></div>
   <button id="walkBtn" class="panel" title="用小人在校園裡走走看">走走看</button>
   <div id="searchWrap">
     <input id="q" type="search" autocomplete="off" placeholder="找地點：學務處、科技中心、圖書室、健康中心…" aria-label="搜尋教室或地點">
@@ -165,12 +181,27 @@ body.walking #brand,body.walking #dock,body.walking #floors,body.walking #search
 <div id="floors" class="panel" role="group" aria-label="樓層"></div>
 <div id="dock"><button id="cardToggle" class="panel" aria-expanded="true" aria-controls="card">收合 ▾</button><div id="card" class="panel" aria-live="polite"></div></div>
 <div id="notice" class="panel" hidden role="status"></div>
-<div id="walkHud" class="panel" hidden><div id="walkWhere" aria-live="polite"></div><span id="walkTip">WASD／方向鍵走・拖曳畫面轉頭・V 視角・C 人物・G 畫質・F 速度・Q／E 上下樓・空白鍵 自動走</span><button id="walkChar" class="btn ghost" title="切換人物（鍵盤 C）">👦<span class="t"> 男生</span></button><button id="walkQ" class="btn ghost" title="畫質（鍵盤 G）">⚙<span class="t"> 高</span></button><button id="walkView" class="btn ghost" title="切換平視／俯瞰（鍵盤 V）" aria-pressed="true">👀 平視</button><button id="walkSpd" class="btn ghost" title="切換走路速度（鍵盤 F）">速度 1×</button><button id="walkPlay" class="btn" hidden>▶ 自動走</button><button id="walkExit" class="btn ghost">結束</button></div>
+<div id="walkHud" class="panel" hidden><div id="walkWhere" aria-live="polite"></div><span id="walkTip">WASD／方向鍵走・拖曳畫面轉頭・V 視角・C 人物・G 畫質・F 速度・Q／E 上下樓・空白鍵 自動走</span><button id="walkChar" class="btn ghost" title="切換人物（鍵盤 C）">👦<span class="t"> 男生</span></button><button id="walkQ" class="btn ghost" title="設定（鍵盤 G 切畫質）">⚙<span class="t"> 高</span></button><button id="walkView" class="btn ghost" title="切換平視／俯瞰（鍵盤 V）" aria-pressed="true">👀 平視</button><button id="walkSpd" class="btn ghost" title="切換走路速度（鍵盤 F）">速度 1×</button><button id="walkPlay" class="btn" hidden>▶ 自動走</button><button id="walkExit" class="btn ghost">結束</button></div>
 <div id="turnCard" hidden><div class="tc-head"><svg id="tcIcon" viewBox="0 0 48 48" aria-hidden="true"></svg><div class="tc-txt"><b id="tcDist"></b><span id="tcText"></span></div></div><div id="tcWin" aria-hidden="true"></div></div>
 <div id="qrBox" hidden role="dialog" aria-modal="true" aria-labelledby="qrTitle"><div class="qr-in panel"><div class="sub">掃描開啟</div><h2 id="qrTitle"></h2><div id="qrImg"></div><div id="qrUrl"></div><p class="qr-tip">可以投影給大家掃，或截圖放進簡報、聯絡簿。</p><div class="row"><button class="btn" id="qrCopy">複製連結</button><button class="btn ghost" id="qrClose">關閉</button></div></div></div>
 <div id="joy" hidden aria-label="移動搖桿"><div id="joyKnob"></div></div>
 <div id="walkBtns" hidden><button id="wUp" class="btn" hidden>▲ 上樓</button><button id="wDn" class="btn" hidden>▼ 下樓</button></div>
-<div id="ver">CAMPUS 3D v1.38 外賓版・資料 115.08.19</div>
+<button id="gearBtn" class="panel" title="設定與進階功能" aria-label="設定與進階功能" aria-haspopup="dialog">⚙</button>
+<div id="gearBox" hidden role="dialog" aria-modal="true" aria-labelledby="gearTitle"><div class="gear-in panel">
+  <div class="gear-hd"><h2 id="gearTitle">設定</h2><button class="btn ghost" id="gearClose" aria-label="關閉">✕</button></div>
+  <section><h3>畫質</h3><div class="seg" id="gearQ"><button data-q="high">高</button><button data-q="std">標準</button><button data-q="low">省電</button></div>
+    <p class="hint">手機預設「標準」。走走看太卡會自動降一級；自己選過就不再自動調。</p></section>
+  <section><h3>走走看的人物</h3><div class="seg" id="gearG"><button data-g="b">👦 男生</button><button data-g="g">👧 女生</button></div></section>
+  <section><button class="btn ghost" id="gearTips">操作說明</button></section>
+  <details id="gearAdv"><summary>進階模式</summary>
+    <p class="hint" id="advHas">由科技中心審核，核准後把連結寄到你的學校信箱（表單要用學校帳號登入）。</p>
+    <a class="adv" id="advApply" target="_blank" rel="noopener"><b>向科技中心申請班級連結</b><span>給導師：家長或來賓打開連結，就導航到你的教室</span></a>
+    <a class="adv" id="advMeet" target="_blank" rel="noopener"><b>向科技中心申請會議／活動導引</b><span>給行政夥伴：先在地圖上排好路線，複製路線連結貼進表單</span></a>
+    <p class="hint" id="advNone" hidden>外賓版僅供瀏覽。<br>中正國中教師需要班級連結或會議／活動導引，請向科技中心申請。</p>
+    <p class="hint soon">校內模式（用學校帳號看完整教室名稱）、管理入口：籌備中。</p>
+  </details>
+</div></div>
+<div id="ver">CAMPUS 3D v1.40 外賓版・資料 115.08.19</div>
 
 <script>/* Three.js r128（MIT License）內嵌 */
 /**
@@ -199,6 +230,8 @@ const DEFAULT_EVENTS_CSV = '';
 const PUBLIC_URL = '';
 // BOOT：用 Google Apps Script 網頁應用程式發布時，伺服端會把「應用程式網址」和網址參數塞進這裡（見 Code.gs）。
 const BOOT = /*__BOOT__*/null || window.__BOOT__ || null;
+/* v1.39 申請表單網址：Apps Script 版由 BOOT.forms 帶進來；GitHub 外賓版要用的話填在這裡 */
+const FORM_LINKS = {apply:'', meet:''};
 /* ---------- 使用統計（v5.32）：只記「做了什麼、從哪裡來、看哪個地點」，不記任何個人資料 ----------
    送到 Apps Script（doPost）寫進母檔「使用紀錄」。GitHub 備援站（大活動用）固定每 10 次記 1 次，權重 10。 */
 const LOG_URL=(BOOT&&BOOT.log)||'https://script.google.com/macros/s/AKfycbywHUAVNsVKFqf7Ck7O4MN48qhLobw1CCzRf6f-q6SUQLX6b2KqpUKhGSxVhQkomoClxA/exec';
@@ -422,7 +455,7 @@ const FLOORNAME=l=>l===0?'B1':l+'F';
 /* ---------- 解析資料 → 格子清單 ---------- */
 const FLOORS=gridToFloors(CSV_TEXT, Object.fromEntries(BUILDINGS.filter(b=>b.b1codes).map(b=>[b.name+(b.part||''),true])));
 BUILDINGS.forEach(b=>{ b.floors=FLOORS[b.name+(b.part||'')]||{1:['（表格缺這一棟）']}; });
-document.getElementById('ver').textContent='CAMPUS 3D v1.38 外賓版・'+DATA_SOURCE;
+document.getElementById('ver').textContent='CAMPUS 3D v1.40 外賓版・'+DATA_SOURCE;
 window.__campus={get goal(){return goal;},get cells(){return cells;}};
 const cells=[];           // 所有格子
 BUILDINGS.forEach((b,bi)=>{
@@ -2246,7 +2279,23 @@ function qualWatch(raw){ if(!QUAL.auto||!WALK.on||document.hidden||raw>2){ QW.t=
   if(fps>=22){ QW.bad=0; return; } if(++QW.bad<2) return; QW.bad=0;
   const i=QUAL_ORDER.indexOf(QUAL.lv); if(i>=2){ QUAL.auto=false; return; }
   const lv=QUAL_ORDER[i+1]; qualSet(lv,'a'); qualMsg('畫面有點卡，已自動調成「'+QUAL_LV[lv].name+'」畫質（⚙ 可以改回來）'); }
-walkQBtn.addEventListener('click',qualNext); qualApply(QUAL.lv);
+walkQBtn.addEventListener('click',()=>gearOpen()); qualApply(QUAL.lv);
+/* v1.39 設定面板 */
+const gearBox=document.getElementById('gearBox');
+function gearSync(){ gearBox.querySelectorAll('#gearQ button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.q===QUAL.lv)));
+  gearBox.querySelectorAll('#gearG button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.g===HERO_G))); }
+function gearOpen(){ const F=Object.assign({},FORM_LINKS,(BOOT&&BOOT.forms)||{}); let any=false;
+  [['advApply',F.apply],['advMeet',F.meet]].forEach(([id,u])=>{ const a=document.getElementById(id); if(u){ a.href=u; a.removeAttribute('aria-disabled'); any=true; } else { a.removeAttribute('href'); a.setAttribute('aria-disabled','true'); } });
+  document.getElementById('advNone').hidden=any; document.getElementById('advHas').hidden=!any;
+  ['advApply','advMeet'].forEach(id=>{ document.getElementById(id).hidden=!any; }); gearBox.querySelector('.soon').hidden=!any; gearSync(); gearBox.hidden=false; document.getElementById('gearClose').focus(); }
+function gearClose(){ gearBox.hidden=true; }
+document.getElementById('gearBtn').addEventListener('click',gearOpen);
+document.getElementById('gearClose').addEventListener('click',gearClose);
+gearBox.addEventListener('click',e=>{ if(e.target===gearBox) gearClose(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!gearBox.hidden) gearClose(); });
+gearBox.querySelectorAll('#gearQ button').forEach(b=>b.addEventListener('click',()=>{ qualSet(b.dataset.q,'u'); gearSync(); }));
+gearBox.querySelectorAll('#gearG button').forEach(b=>b.addEventListener('click',()=>{ try{ localStorage.setItem('campus3d.char',b.dataset.g); }catch(e){} heroGender(b.dataset.g); gearSync(); }));
+document.getElementById('gearTips').addEventListener('click',()=>{ gearClose(); showTips(); });
 /* 手機直式：狀態列按鈕只留圖示，免得擠掉 */
 document.getElementById('walkBtn').addEventListener('click',()=>walkStart(null));
 document.getElementById('walkExit').addEventListener('click',walkStop);
