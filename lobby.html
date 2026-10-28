@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>中正國中 穿堂活動廣告牆</title>
+  <!--
+    穿堂觸控大屏外殼頁（放在 GitHub Pages）
+    作用：
+      1. 用 iframe 包住祈福牆，並封鎖「開新視窗」「整頁跳轉」，避免被點到其他網站
+      2. 有人操作過、之後閒置一段時間 → 自動重新載入回首頁
+      3. 每天固定時間整頁重新整理（清記憶體）
+      4. 斷網恢復後自動重新載入
+    管理：長按右上角 3 秒，會出現管理面板
+  -->
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #fdf5e6; font-family: 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
+                 touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+    #app { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; display: block; }
+    #offline { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 20; background: #e53935; color: #fff;
+               padding: 10px 22px; border-radius: 999px; font-weight: bold; font-size: 18px; }
+    #hotspot { position: fixed; right: 0; top: 0; width: 70px; height: 70px; z-index: 30; }
+    #admin { position: fixed; right: 16px; top: 16px; z-index: 40; background: #fff; border-radius: 14px; box-shadow: 0 6px 24px rgba(0,0,0,.25);
+             padding: 14px; display: flex; flex-direction: column; gap: 8px; min-width: 200px; }
+    #admin button { padding: 12px 14px; border-radius: 10px; border: 1px solid #ccc; background: #f7f7f7; font-size: 16px; font-weight: bold; cursor: pointer; font-family: inherit; }
+    #admin p { margin: 0; font-size: 12px; color: #777; }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <!--
+    sandbox 說明：
+      allow-scripts、allow-same-origin、allow-forms：祈福牆正常運作所需
+      刻意「不」加 allow-top-navigation、allow-popups：裡面的任何連結都無法讓整頁跳走或開新視窗
+  -->
+  <iframe id="app" title="穿堂活動廣告牆" sandbox="allow-scripts allow-same-origin allow-forms" referrerpolicy="no-referrer"></iframe>
+
+  <div id="offline" hidden>⚠️ 網路中斷，恢復後會自動重新載入</div>
+
+  <div id="hotspot"></div>
+  <div id="admin" hidden>
+    <button onclick="reloadApp(); hideAdmin();">🔄 重新載入畫面</button>
+    <button onclick="location.reload()">♻️ 整頁重新整理</button>
+    <button onclick="hideAdmin()">✖ 關閉</button>
+    <p id="adminInfo"></p>
+  </div>
+
+  <script>
+    /* ====== 設定區（只需要改這裡） ====== */
+    // 祈福牆的網址：用「不帶 /a/網域/」的 exec 網址，且不要加 ?theme=（才會由中控表「穿堂電視」分頁控制）
+    const APP_URL = 'https://script.google.com/macros/s/AKfycbytbJIulb0V7W3OOx0gqhfDJxnxm5WoVBrAn33kYackqp1hTlSvG7irnlHn1qazohhH/exec';
+    const IDLE_RELOAD_MIN = 5;     // 有人操作過，之後閒置幾分鐘 → 重新載入回首頁
+    const SAFE_RELOAD_MIN = 60;    // 就算沒人碰，每隔幾分鐘（且閒置中）重新載入一次，防止畫面卡住
+    const DAILY_RELOAD_HOUR = 6;   // 每天幾點整頁重新整理（大屏若晚上關機，開機後也會載入最新版）
+    /* ==================================== */
+
+    const app = document.getElementById('app');
+    let touched = false, lastTouch = 0, lastLoad = 0, lastDailyKey = '', adminTimer = null;
+
+    function reloadApp() {
+      app.src = APP_URL;
+      touched = false;
+      lastLoad = Date.now();
+    }
+
+    // 偵測有人操作：點進 iframe 時焦點會移過去
+    function markTouch() { touched = true; lastTouch = Date.now(); }
+    document.addEventListener('pointerdown', markTouch, { passive: true });
+    window.addEventListener('blur', function () { setTimeout(function () { if (document.activeElement === app) markTouch(); }, 0); });
+
+    setInterval(function () {
+      if (document.activeElement === app) { markTouch(); app.blur(); window.focus(); }
+
+      const now = Date.now();
+      const idleMs = now - lastTouch;
+
+      // 1. 有人操作過、閒置夠久 → 回首頁
+      if (touched && idleMs > IDLE_RELOAD_MIN * 60000) reloadApp();
+
+      // 2. 定期保養重載（只在閒置時做，不打斷正在操作的人）
+      if (now - lastLoad > SAFE_RELOAD_MIN * 60000 && idleMs > 2 * 60000) reloadApp();
+
+      // 3. 每天固定時間整頁重新整理
+      const d = new Date();
+      const dayKey = d.toDateString();
+      if (d.getHours() === DAILY_RELOAD_HOUR && lastDailyKey && lastDailyKey !== dayKey) {
+        lastDailyKey = dayKey;
+        location.reload();
+      }
+      if (!lastDailyKey) lastDailyKey = dayKey;
+    }, 1000);
+
+    // 斷網提示與恢復
+    window.addEventListener('offline', function () { document.getElementById('offline').hidden = false; });
+    window.addEventListener('online', function () {
+      document.getElementById('offline').hidden = true;
+      reloadApp();
+    });
+
+    // 鎖定外殼本身的手勢與按鍵
+    ['contextmenu', 'dragstart', 'selectstart'].forEach(function (t) {
+      document.addEventListener(t, function (e) { e.preventDefault(); });
+    });
+    document.addEventListener('wheel', function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+    document.addEventListener('keydown', function (e) {
+      if ((e.ctrlKey || e.metaKey) && ['+', '-', '=', '0', 'p', 's', 'o', 'l', 't', 'n'].indexOf(e.key) >= 0) e.preventDefault();
+    });
+    window.open = function () { return null; };
+
+    // 隱藏管理面板：長按右上角 3 秒
+    (function () {
+      const hs = document.getElementById('hotspot');
+      let t = null;
+      hs.addEventListener('pointerdown', function () { clearTimeout(t); t = setTimeout(showAdmin, 3000); });
+      ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (ev) {
+        hs.addEventListener(ev, function () { clearTimeout(t); });
+      });
+    })();
+
+    function showAdmin() {
+      document.getElementById('adminInfo').textContent =
+        '上次載入：' + new Date(lastLoad).toLocaleTimeString('zh-TW', { hour12: false });
+      document.getElementById('admin').hidden = false;
+      clearTimeout(adminTimer);
+      adminTimer = setTimeout(hideAdmin, 20000);
+    }
+    function hideAdmin() { document.getElementById('admin').hidden = true; clearTimeout(adminTimer); }
+
+    reloadApp();
+  </script>
+</body>
+</html>
