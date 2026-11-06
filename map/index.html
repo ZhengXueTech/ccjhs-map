@@ -164,13 +164,17 @@ body.walking #gearBtn{display:none}
 #tipRing{position:fixed;z-index:59;border:3px solid var(--accent);border-radius:12px;pointer-events:none;box-shadow:0 0 0 4px rgba(22,103,183,.25);animation:tipP 1.2s ease-in-out infinite}#tipRing[hidden]{display:none}
 @keyframes tipP{50%{box-shadow:0 0 0 10px rgba(22,103,183,.08)}}
 .hint{margin:6px 0;padding:6px 10px;border-radius:9px;background:rgba(22,103,183,.1);font-size:14px}
+/* v1.41 展示模式（kiosk=1）：只留外賓用功能 */
+.kiosk #gearBtn,.kiosk #searchWrap,.kiosk #walkQ,.kiosk #bCopy,.kiosk #bRouteCopy,.kiosk #bEvCopy,.kiosk #qrCopy,.kiosk #linkOut,.kiosk #tips,.kiosk #tipRing,.kiosk #bTips,.kiosk #gearTips{display:none!important}
+.kiosk #top{right:16px!important}
+.kiosk .row:has(> .sub:only-child){display:none}
 </style>
 
 <canvas id="stage" aria-label="中正國中 3D 校園模型"></canvas>
 <div id="labels"></div>
 
 <div id="top">
-  <div id="brand" class="panel"><b>CAMPUS 3D v1.40 外賓版</b><span>新北市立中正國中・115 學年度教室位置</span></div>
+  <div id="brand" class="panel"><b>CAMPUS 3D v1.41 外賓版</b><span>新北市立中正國中・115 學年度教室位置</span></div>
   <button id="walkBtn" class="panel" title="用小人在校園裡走走看">走走看</button>
   <div id="searchWrap">
     <input id="q" type="search" autocomplete="off" placeholder="找地點：學務處、科技中心、圖書室、健康中心…" aria-label="搜尋教室或地點">
@@ -201,7 +205,7 @@ body.walking #gearBtn{display:none}
     <p class="hint soon">校內模式（用學校帳號看完整教室名稱）、管理入口：籌備中。</p>
   </details>
 </div></div>
-<div id="ver">CAMPUS 3D v1.40 外賓版・資料 115.08.19</div>
+<div id="ver">CAMPUS 3D v1.41 外賓版・資料 115.08.19</div>
 
 <script>/* Three.js r128（MIT License）內嵌 */
 /**
@@ -230,6 +234,11 @@ const DEFAULT_EVENTS_CSV = '';
 const PUBLIC_URL = '';
 // BOOT：用 Google Apps Script 網頁應用程式發布時，伺服端會把「應用程式網址」和網址參數塞進這裡（見 Code.gs）。
 const BOOT = /*__BOOT__*/null || window.__BOOT__ || null;
+/* v1.41 展示模式：網址加 kiosk=1（穿堂活動廣告牆用）。from＝起點（優先於活動的起點欄）；idle＝有人操作後閒置幾秒回到開啟畫面（預設 90，0＝不自動回） */
+const KQ=(()=>{ const P=(BOOT&&BOOT.p)||{}; let U; try{ U=new URLSearchParams(location.search); }catch(e){ U=new URLSearchParams(''); }
+  const g=k=>(P[k]!=null&&P[k]!=='')?String(P[k]):(U.get(k)||''); return {k:g('kiosk'),idle:g('idle'),from:g('from')}; })();
+const KIOSK=/^(1|true|yes|on)$/i.test(KQ.k), KIOSK_FROM=KIOSK?KQ.from:'', KIOSK_IDLE=(()=>{ const v=parseInt(KQ.idle,10); return isNaN(v)?90:Math.max(0,v); })();
+if(KIOSK) document.documentElement.classList.add('kiosk');
 /* v1.39 申請表單網址：Apps Script 版由 BOOT.forms 帶進來；GitHub 外賓版要用的話填在這裡 */
 const FORM_LINKS = {apply:'', meet:''};
 /* ---------- 使用統計（v5.32）：只記「做了什麼、從哪裡來、看哪個地點」，不記任何個人資料 ----------
@@ -455,7 +464,7 @@ const FLOORNAME=l=>l===0?'B1':l+'F';
 /* ---------- 解析資料 → 格子清單 ---------- */
 const FLOORS=gridToFloors(CSV_TEXT, Object.fromEntries(BUILDINGS.filter(b=>b.b1codes).map(b=>[b.name+(b.part||''),true])));
 BUILDINGS.forEach(b=>{ b.floors=FLOORS[b.name+(b.part||'')]||{1:['（表格缺這一棟）']}; });
-document.getElementById('ver').textContent='CAMPUS 3D v1.40 外賓版・'+DATA_SOURCE;
+document.getElementById('ver').textContent='CAMPUS 3D v1.41 外賓版・'+DATA_SOURCE;
 window.__campus={get goal(){return goal;},get cells(){return cells;}};
 const cells=[];           // 所有格子
 BUILDINGS.forEach((b,bi)=>{
@@ -974,7 +983,7 @@ const PLACES=[
  ['無障礙坡道（司令台左側）','ramp-l',716,499,30,12,1.6],['無障礙坡道（司令台右側）','ramp-r',812,499,30,12,1.6],['AED（警衛室）','aed',688,774,64,28,3.6],
  ['司令台','stage',764,497,68,24,3.6],['籃球場','court',758,655,560,260,0.6],['風雨操場','covered',1340,135,340,100,FH*3+0.2]];
 const GMAP='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent('新北市立中正國民中學');
-const gmapBtn='<a class="btn ghost" href="'+GMAP+'" target="_blank" rel="noopener">Google 地圖</a>';
+const gmapBtn=KIOSK?'':'<a class="btn ghost" href="'+GMAP+'" target="_blank" rel="noopener">Google 地圖</a>';
 const OUTDOOR={name:'戶外',phi:0,part:null};
 const dummy=new THREE.Object3D();
 /* v1.17 正門：四根白色磁磚門柱、藍色門楣（校名）、校徽、兩側矮牆（深色底＋金色浮雕帶）。門面朝南（街道） */
@@ -1219,7 +1228,7 @@ const q=document.getElementById('q'), resEl=document.getElementById('results');
 function hideResults(){ resEl.hidden=true; }
 /* 最近查過（存在這支手機，最多 6 個；未公開的格子不記） */
 function recentCells(){ let a=[]; try{ a=JSON.parse(localStorage.getItem('campus3d.recent')||'[]'); }catch(e){} return a.map(t=>cells.find(x=>x.findable&&(x.token===t||x.name===t))).filter(Boolean); }
-function rememberCell(c){ if(!c||!c.findable) return; try{ const t=stableTok(c); let a=JSON.parse(localStorage.getItem('campus3d.recent')||'[]').filter(x=>x!==t); a.unshift(t); localStorage.setItem('campus3d.recent',JSON.stringify(a.slice(0,6))); }catch(e){} }
+function rememberCell(c){ if(!c||!c.findable||KIOSK) return; try{ const t=stableTok(c); let a=JSON.parse(localStorage.getItem('campus3d.recent')||'[]').filter(x=>x!==t); a.unshift(t); localStorage.setItem('campus3d.recent',JSON.stringify(a.slice(0,6))); }catch(e){} }
 /* 三步驟提示（v5.33；v5.34 改成函式，首頁「操作說明」可以再看） */
 function showTips(){ if(document.getElementById('tips')) return;
   const S=[['#q','🔍 在上方<b>搜尋</b>教室或地點，例如「圖書室」「科技中心」。'],[null,'📍 點選地點後按<b>「帶我去」</b>就會畫出路線；按<b>「從這裡出發」</b>可以換起點，教室到教室也行。'],['#walkBtn','🚶 按<b>「走走看」</b>，用小人跟著路線在校園裡走，轉彎會提醒你。']];
@@ -1748,7 +1757,7 @@ function routeCard(msg,info,stops){ const evTop=nav.event?evBoxHTML(nav.event,tr
 window.__campus.nav=nav; window.__campus.showRoute=showRoute; window.__campus.NN=NN; window.__campus.CODE=CODE; window.__campus.describe=()=>nav.path&&describe(nav.path,[nav.from].concat(nav.vias,[nav.to]).map(resolveNode));
 
 goHome(true);
-{ let open=window.innerWidth>=640; try{ const v=localStorage.getItem('campus3d.card'); if(v!==null) open=v==='1'; }catch(e){} setCard(open); }
+{ let open=window.innerWidth>=640; try{ const v=localStorage.getItem('campus3d.card'); if(v!==null) open=v==='1'; }catch(e){} setCard(KIOSK||open); }
 
 /* ---------- 活動連結、公告、封閉路段（資料來自「活動公告」表） ---------- */
 const noticeEl=document.getElementById('notice');
@@ -1792,11 +1801,12 @@ function evBoxHTML(ev,compact){
       (st.old?'<div class="chg">地點異動：原訂「'+esc(st.old)+'」，改至「'+esc(c?displayName(c):st.place)+'」</div>':'')+(st.note&&!compact?'<div class="nt2">'+esc(st.note)+'</div>':'')+'</li>'; }).join('');
   const multi=ev.stops.length>1, routed=!!(ev.start||ev.vias.length);
   const pnote=compact&&!multi&&ev.priv&&ev.stops[0]&&ev.stops[0].note?'<div class="nt2">'+esc(ev.stops[0].note)+'</div>':'';   /* 會議導引：時間和說明在路線卡上也要看得到 */
-  return '<div class="evbox"><div class="sub">'+(/^m/i.test(ev.code)?'會議':'活動')+'</div><b>'+esc(ev.title)+'</b>'+pnote+(multi||!compact?'<ol class="evstops">'+list+'</ol>':(ev.stops[0]&&ev.stops[0].old?'<div class="chg">地點異動：原訂「'+esc(ev.stops[0].old)+'」</div>':''))+
+  return '<div class="evbox"><div class="sub">'+(ev.priv&&/^m/i.test(ev.code)?'會議':'活動')+'</div><b>'+esc(ev.title)+'</b>'+pnote+(multi||!compact?'<ol class="evstops">'+list+'</ol>':(ev.stops[0]&&ev.stops[0].old?'<div class="chg">地點異動：原訂「'+esc(ev.stops[0].old)+'」</div>':''))+
     '<div class="row">'+((multi||routed)&&!compact?'<button class="btn" id="bEvRoute">'+(multi?'依序帶我走一遍':'顯示指定路線')+'</button>':'')+'<button class="btn ghost" id="bEvCopy">複製活動連結</button><button class="btn ghost" id="bEvQR">QR Code</button></div></div>'; }
 function evRoute(ev){ const toks=ev.stops.map(st=>{ const c=stopCell(st.place); return c?c.token:null; }).filter(Boolean); if(!toks.length) return false;
-  if(ev.start&&resolveNode(ev.start)){ nav.from=ev.start; markStart(); }
-  nav.event=ev; nav.vias=ev.vias.filter(v=>resolveNode(v)).concat(toks.slice(0,-1)); nav.to=toks[toks.length-1]; showRoute(); return true; }
+  const kf=(KIOSK&&KIOSK_FROM&&resolveNode(KIOSK_FROM))?KIOSK_FROM:null, st=kf||ev.start;   /* v1.41 展示模式：網址的 from 優先 */
+  if(st&&resolveNode(st)){ nav.from=st; markStart(); }
+  nav.event=ev; nav.vias=ev.vias.filter(v=>resolveNode(v)&&(!kf||/^T\d+$/.test(v))).concat(toks.slice(0,-1));   /* 起點換掉時，活動原本的入口途經點（G）略過，指定樓梯（T）保留 */ nav.to=toks[toks.length-1]; showRoute(); return true; }
 card.addEventListener('click',e=>{ const t=e.target.closest&&e.target.closest('[data-evstop]'), ev=nav.event||curEvent; if(t&&ev){ const c=stopCell(ev.stops[+t.dataset.evstop].place); if(c){ nav.event=null; selectRoom(c); card.insertAdjacentHTML('afterbegin','<button class="btn ghost" id="bEvBack">← 回到活動「'+esc(ev.title)+'」</button>'); card.querySelector('#bEvBack').addEventListener('click',()=>showEvent(ev.code)); } }
   const r=e.target.closest&&e.target.closest('#bEvRoute'); if(r&&curEvent) evRoute(curEvent);
   const eq=e.target.closest&&e.target.closest('#bEvQR'); if(eq&&(nav.event||curEvent)){ const ev3=nav.event||curEvent; showQR(linkFor('#e-'+ev3.code),ev3.title); }
@@ -1809,7 +1819,7 @@ function showEvent(code){ if(!eventsLoaded){ pendingEvent=code; return true; }
   if(!ev.active) return plain(ev.title,'這個活動連結目前沒有開放，可能尚未開始或已經結束。');
   revealStops(ev); const ok=ev.stops.filter(st=>stopCell(st.place));
   if(!ok.length) return plain(ev.title,'活動地點不在這份地圖上，請洽主辦單位。');
-  if(ev.start||ev.vias.length){ evRoute(ev); return true; }          // 有指定起點或途經：直接顯示整條路線
+  if(ev.start||ev.vias.length||(KIOSK&&KIOSK_FROM)){ evRoute(ev); return true; }          // 有指定起點或途經：直接顯示整條路線
   if(ev.stops.length>1){ nav.event=null; const c=stopCell(ok[0].place); selectRoom(c,{keepHash:true}); card.innerHTML=evBoxHTML(ev,false)+'<input id="linkOut" readonly hidden aria-label="分享連結">'; card.scrollTop=0; return true; }
   const c=stopCell(ok[0].place); nav.event=null; selectRoom(c,{keepHash:true}); card.insertAdjacentHTML('afterbegin',evBoxHTML(ev,false)); card.scrollTop=0; return true; }
 card.addEventListener('click',e=>{ const t=e.target.closest&&e.target.closest('[data-ev]'); if(t) showEvent(t.dataset.ev); });
@@ -2302,15 +2312,31 @@ document.getElementById('walkExit').addEventListener('click',walkStop);
 window.__campus.qual={state:QUAL,set:qualSet,levels:QUAL_LV};
 window.__campus.walk={turn:TURN,play:autoPlay,pause:autoPause,start:walkStart,stop:walkStop,climb:walkClimb,state:WALK,joy:JOY,hero,best:(id,x,z)=>walkBest(id,x,z,-1),tick:walkTick}; window.__campus.EE=EE; window.__campus.cam=cam;
 
+/* v1.41 展示模式：沒人碰就一直停在開啟時的畫面；有人操作後閒置 KIOSK_IDLE 秒才回去。觸碰時通知外層的廣告牆 */
+if(KIOSK){ let last=Date.now(), dirty=false, warned=false, ping=0;
+  const kioskReset=()=>{ dirty=false; warned=false;
+    try{ if(WALK.on) walkStop(); }catch(e){}
+    qrBox.hidden=true; gearBox.hidden=true; hideResults(); q.value=''; q.blur(); pickStart(false);
+    nav.rain=false; nav.acc=false; hideRoute(); nav.from='G01';
+    try{ history.replaceState(null,'',location.href.split('#')[0]); }catch(e){}
+    goHome(true); fromLink(); setCard(true); card.scrollTop=0; };
+  const poke=()=>{ last=Date.now(); dirty=true; warned=false; const n=Date.now(); if(n-ping<1000) return; ping=n;
+    let w=window; for(let i=0;i<6;i++){ let p=null; try{ p=w.parent; }catch(e){} if(!p||p===w) break; w=p; try{ w.postMessage('map-interaction','*'); }catch(e){} } };   /* Apps Script 有兩層外框，一路往上送 */
+  ['pointerdown','wheel','keydown','touchstart'].forEach(ty=>document.addEventListener(ty,poke,{capture:true,passive:true}));
+  if(KIOSK_IDLE>0) setInterval(()=>{ if(!dirty) return; if(WALK.auto&&WALK.auto.play){ last=Date.now(); return; }   /* 正在自動走：不算閒置 */
+    const left=KIOSK_IDLE*1000-(Date.now()-last);
+    if(left<=10000&&!warned&&KIOSK_IDLE>15){ warned=true; qualMsg('沒有人操作，10 秒後回到預設畫面'); }
+    if(left<=0) kioskReset(); },1000);
+  window.__campus.kioskReset=kioskReset; }
 window.__campus.applyNotices=applyNotices; window.__campus.pointCard=pointCard; window.__campus.showEvent=showEvent;
 fromLink(); Object.assign(cam,goal); animate();
 /* 第一次開啟的三步驟提示：只在「直接打開」時自動出現，看過或略過就不再自動出現；首頁「操作說明」可以再看 */
-setTimeout(()=>{ try{ const QP=LATE_PARAMS||(BOOT&&BOOT.p)||{}, U=new URLSearchParams(location.search);
+setTimeout(()=>{ try{ if(KIOSK) return; const QP=LATE_PARAMS||(BOOT&&BOOT.p)||{}, U=new URLSearchParams(location.search);
   if(QP.to||QP.from||QP.event||QP.e||U.get('to')||U.get('from')||U.get('event')||U.get('e')||location.hash.length>1) return;
   let seen=null; try{ seen=localStorage.getItem('campus3d.tips'); }catch(e){} if(!seen) showTips(); }catch(e){} },1200);
 setTimeout(()=>{ try{ const QP=LATE_PARAMS||(BOOT&&BOOT.p)||null, q=QP?{get:k=>QP[k]||null}:new URLSearchParams(location.search), H=location.hash||'';   /* 這一次是從哪裡打開的 */
   const ev=q.get('event')||q.get('e')||(H.match(/^#e-(.+)$/)||[])[1], from=q.get('from'), to=q.get('to')||(H.match(/^#r(.+)$/)||[])[1];
-  logUse('開啟', ev?decodeURIComponent(ev):(from&&!to?from:(to?'link':'direct')), to?decodeURIComponent(to):''); }catch(e){} },2500);
+  logUse('開啟', KIOSK?'kiosk':(ev?decodeURIComponent(ev):(from&&!to?from:(to?'link':'direct'))), to?decodeURIComponent(to):''); }catch(e){} },2500);
 (async()=>{ let txt=DEFAULT_EVENTS_CSV; if(EVENTS_CSV_URL){ try{ const ctl=new AbortController(), tm=setTimeout(()=>ctl.abort(),7000); const r=await fetch(EVENTS_CSV_URL,{signal:ctl.signal,cache:'no-store'}); clearTimeout(tm); const t=await r.text(); if(r.ok&&t.indexOf('類型')>=0) txt=t; }catch(e){} } applyNotices(txt); })();
 try{ if(window.google&&google.script&&google.script.url) google.script.url.getLocation(function(loc){ const P=(loc&&loc.parameter)||{}, had=BOOT&&BOOT.p&&(BOOT.p.to||BOOT.p.from);
   if(loc&&loc.hash){ fromLink('#'+loc.hash); } else if(!had&&(P.to||P.from)){ LATE_PARAMS=P; fromLink(); } }); }catch(e){}
