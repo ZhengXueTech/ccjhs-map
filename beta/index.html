@@ -240,7 +240,7 @@ const KQ=(()=>{ const P=(BOOT&&BOOT.p)||{}; let U; try{ U=new URLSearchParams(lo
 const KIOSK=/^(1|true|yes|on)$/i.test(KQ.k), KIOSK_FROM=KIOSK?KQ.from:'', KIOSK_IDLE=(()=>{ const v=parseInt(KQ.idle,10); return isNaN(v)?90:Math.max(0,v); })();
 if(KIOSK) document.documentElement.classList.add('kiosk');
 /* v1.42 多單位：資料來源登記表（獨立試算表「資料來源」分頁發布成 CSV）。留空或讀不到＝只有下面內建的科技中心 */
-const REGISTRY_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSHepmqoPzyY4q_3TOF_GY5Oszcc8yEsW1ylFe8kLeS3rQpTQPVA9uMVh2KyqUgwP_5RdjaHB_3vI-N/pub?gid=1332490112&single=true&output=csv';
+const REGISTRY_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vREcXjYhWAkhIjp1veATAlGKRqiGbYPPoPwnqlAbvf-8mbAOISYgSWUFNFdNT47ErKpnDjVM_vgS2ar/pub?gid=1332490112&single=true&output=csv';
 const DEFAULT_SOURCES = [{id:'tc', name:'科技中心', url:EVENTS_CSV_URL, trust:true}];
 const SRC_PARAM = (()=>{ const P=(BOOT&&BOOT.p)||{}; let v=P.src; if(v==null){ try{ v=new URLSearchParams(location.search).get('src'); }catch(e){} }
   return String(v||'').toLowerCase().split(/[,，]/).map(s=>s.trim()).filter(s=>/^[a-z0-9_-]{1,20}$/.test(s)); })();
