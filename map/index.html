@@ -174,7 +174,7 @@ body.walking #gearBtn{display:none}
 <div id="labels"></div>
 
 <div id="top">
-  <div id="brand" class="panel"><b>CAMPUS 3D v1.41 外賓版</b><span>新北市立中正國中・115 學年度教室位置</span></div>
+  <div id="brand" class="panel"><b>CAMPUS 3D v1.42 外賓版</b><span>新北市立中正國中・115 學年度教室位置</span></div>
   <button id="walkBtn" class="panel" title="用小人在校園裡走走看">走走看</button>
   <div id="searchWrap">
     <input id="q" type="search" autocomplete="off" placeholder="找地點：學務處、科技中心、圖書室、健康中心…" aria-label="搜尋教室或地點">
@@ -205,7 +205,7 @@ body.walking #gearBtn{display:none}
     <p class="hint soon">校內模式（用學校帳號看完整教室名稱）、管理入口：籌備中。</p>
   </details>
 </div></div>
-<div id="ver">CAMPUS 3D v1.41 外賓版・資料 115.08.19</div>
+<div id="ver">CAMPUS 3D v1.42 外賓版・資料 115.08.19</div>
 
 <script>/* Three.js r128（MIT License）內嵌 */
 /**
@@ -239,13 +239,20 @@ const KQ=(()=>{ const P=(BOOT&&BOOT.p)||{}; let U; try{ U=new URLSearchParams(lo
   const g=k=>(P[k]!=null&&P[k]!=='')?String(P[k]):(U.get(k)||''); return {k:g('kiosk'),idle:g('idle'),from:g('from')}; })();
 const KIOSK=/^(1|true|yes|on)$/i.test(KQ.k), KIOSK_FROM=KIOSK?KQ.from:'', KIOSK_IDLE=(()=>{ const v=parseInt(KQ.idle,10); return isNaN(v)?90:Math.max(0,v); })();
 if(KIOSK) document.documentElement.classList.add('kiosk');
+/* v1.42 多單位：資料來源登記表（獨立試算表「資料來源」分頁發布成 CSV）。留空或讀不到＝只有下面內建的科技中心 */
+const REGISTRY_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vREcXjYhWAkhIjp1veATAlGKRqiGbYPPoPwnqlAbvf-8mbAOISYgSWUFNFdNT47ErKpnDjVM_vgS2ar/pub?gid=1332490112&single=true&output=csv';
+const DEFAULT_SOURCES = [{id:'tc', name:'科技中心', url:EVENTS_CSV_URL, trust:true}];
+const SRC_PARAM = (()=>{ const P=(BOOT&&BOOT.p)||{}; let v=P.src; if(v==null){ try{ v=new URLSearchParams(location.search).get('src'); }catch(e){} }
+  return String(v||'').toLowerCase().split(/[,，]/).map(s=>s.trim()).filter(s=>/^[a-z0-9_-]{1,20}$/.test(s)); })();
+const IS_BETA = /\/beta\//.test(location.pathname);
+var SOURCES_LOADED = [], UNIT_FILTER = '';
 /* v1.39 申請表單網址：Apps Script 版由 BOOT.forms 帶進來；GitHub 外賓版要用的話填在這裡 */
 const FORM_LINKS = {apply:'', meet:''};
 /* ---------- 使用統計（v5.32）：只記「做了什麼、從哪裡來、看哪個地點」，不記任何個人資料 ----------
    送到 Apps Script（doPost）寫進母檔「使用紀錄」。GitHub 備援站（大活動用）固定每 10 次記 1 次，權重 10。 */
 const LOG_URL=(BOOT&&BOOT.log)||'https://script.google.com/macros/s/AKfycbywHUAVNsVKFqf7Ck7O4MN48qhLobw1CCzRf6f-q6SUQLX6b2KqpUKhGSxVhQkomoClxA/exec';
 const LOG_RATE=(BOOT&&BOOT.logRate>0)?Math.min(1,+BOOT.logRate):0.1;
-const LOG_ON=(!!BOOT||/github\.io$/.test(location.hostname))&&Math.random()<LOG_RATE;   /* 只在正式網址記錄；離線檔、測試頁不記 */
+const LOG_ON=(!!BOOT||/github\.io$/.test(location.hostname))&&!/\/beta\//.test(location.pathname)&&Math.random()<LOG_RATE;   /* 只在正式網址記錄；離線檔、測試頁不記 */
 var LOG_N=0, LOG_SEEN={};
 function logUse(kind,src,place){ try{ if(!LOG_ON||LOG_N>=15) return; const k=kind+'|'+(src||'')+'|'+(place||''); if(LOG_SEEN[k]) return; LOG_SEEN[k]=1; LOG_N++;
   const body=JSON.stringify({k:kind,s:src||'',p:place||'',m:(window.matchMedia&&matchMedia('(pointer:coarse)').matches)?'手機':'電腦',v:BOOT?'gas':'static',w:Math.round(1/LOG_RATE)});
@@ -464,7 +471,7 @@ const FLOORNAME=l=>l===0?'B1':l+'F';
 /* ---------- 解析資料 → 格子清單 ---------- */
 const FLOORS=gridToFloors(CSV_TEXT, Object.fromEntries(BUILDINGS.filter(b=>b.b1codes).map(b=>[b.name+(b.part||''),true])));
 BUILDINGS.forEach(b=>{ b.floors=FLOORS[b.name+(b.part||'')]||{1:['（表格缺這一棟）']}; });
-document.getElementById('ver').textContent='CAMPUS 3D v1.41 外賓版・'+DATA_SOURCE;
+document.getElementById('ver').textContent='CAMPUS 3D v1.42 外賓版・'+DATA_SOURCE+(IS_BETA?'・測試版':'');
 window.__campus={get goal(){return goal;},get cells(){return cells;}};
 const cells=[];           // 所有格子
 BUILDINGS.forEach((b,bi)=>{
@@ -1772,42 +1779,52 @@ function closePlace(p){ if(!p) return false;
   const n=resolveNode(p); if(!n) return false;
   if(/^T\d+$/.test(p)){ NN.forEach(m=>{ if(m.b===n.b&&m.cell&&m.cell.type==='stair'&&Math.abs(m.t-n.t)<7) blockNode(m,['stair','lift']); }); return true; }   // 整座樓梯：同一棟、同一位置的每一層
   blockNode(n,null); return true; }
-function evRowHTML(){ const a=(EVENTS||[]).filter(e=>e.active&&!e.priv); return a.length? '<div class="sub">活動</div><div class="row">'+a.map(e=>'<button class="chip" data-ev="'+esc(e.code)+'">'+esc(e.title)+'</button>').join('')+'</div>' : ''; }
+function evRowHTML(){ const all=(EVENTS||[]).filter(e=>e.active&&!e.priv); if(!all.length) return '';
+  const units=[]; all.forEach(e=>{ if(e.unit&&units.indexOf(e.unit)<0) units.push(e.unit); });
+  if(UNIT_FILTER&&units.indexOf(UNIT_FILTER)<0) UNIT_FILTER='';
+  const a=UNIT_FILTER?all.filter(e=>e.unit===UNIT_FILTER):all;
+  const tabs=units.length>1?'<div class="row">'+[''].concat(units).map(u=>'<button class="chip" data-unit="'+esc(u)+'" aria-pressed="'+(u===UNIT_FILTER)+'"'+(u===UNIT_FILTER?' style="background:var(--accent);color:var(--accent-ink);border-color:var(--accent)"':'')+'>'+esc(u||'全部')+'</button>').join('')+'</div>':'';   /* v1.42 多單位分頁 */
+  return '<div class="sub">活動</div>'+tabs+'<div class="row">'+a.map(e=>'<button class="chip" data-ev="'+esc(e.code)+'">'+esc(e.title)+'</button>').join('')+'</div>'; }
 function renderNotice(){
   const items=NOTICES.map(o=>'<div class="nt"><b>'+esc(o.title||'公告')+'</b>'+(o.note?'　'+esc(o.note):'')+'</div>')
     .concat(CLOSED.map(o=>'<div class="nt cl"><b>暫停通行：'+esc(o.title||nodeLabel(resolveNode(o.place))||o.place)+'</b>'+(o.note?'　'+esc(o.note):'')+'</div>'));
   noticeEl.hidden=!items.length; noticeEl.innerHTML=items.join('')+(items.length?'<button id="ntX" aria-label="關閉公告">✕</button>':'');
   const x=noticeEl.querySelector('#ntX'); if(x) x.addEventListener('click',()=>{ noticeEl.hidden=true; }); }
-function applyNotices(text){
-  const rows=parseCSV(text||''), hi=rows.findIndex(r=>(r[0]||'').trim()==='類型'), now=new Date(); EVENTS=[]; NOTICES=[]; CLOSED=[];
+function applyNotices(input){
+  /* v1.42：input＝單一 CSV 文字（內建科技中心），或 [{src:{id,name,trust}, text}]（多個登記來源） */
+  const parts=Array.isArray(input)?input:[{src:DEFAULT_SOURCES[0],text:input}], now=new Date(); EVENTS=[]; NOTICES=[]; CLOSED=[];
+  SOURCES_LOADED=parts.map(p=>p.src);
   EE.forEach(a=>a.forEach(e=>{ e.x=0; })); const byCode={};
+  parts.forEach(part=>{ const S=part.src||DEFAULT_SOURCES[0], rows=parseCSV(part.text||''), hi=rows.findIndex(r=>(r[0]||'').trim()==='類型');
   (hi<0?[]:rows.slice(hi+1)).forEach(r=>{ const g=i=>String(r[i]==null?'':r[i]).trim();
     const o={type:g(0),code:g(1),title:g(2),place:g(3),old:g(4),note:g(5),from:g(6),to:g(7),on:g(8),start:g(9),via:g(10)}; if(!o.type) return;
     if(o.type==='活動'){ if(!o.code) return; const k=o.code.toLowerCase(); let ev=byCode[k];
-      if(!ev){ o.active=rowActive(o,now); ev=byCode[k]={code:o.code,title:o.title||o.code,note:'',active:o.active,start:o.start,vias:o.via?o.via.split(/[,，、]/).map(x=>x.trim()).filter(Boolean):[],stops:[]}; EVENTS.push(ev); }
+      if(ev&&ev.src!==S.id){ if(!ev.dupWarned){ ev.dupWarned=1; console.warn('活動代號重複：「'+o.code+'」同時出現在 '+ev.unit+' 與 '+S.name+'，以 '+ev.unit+' 為準'); } return; }   /* v1.42 跨單位撞號：先登記的優先 */
+      if(!ev){ o.active=rowActive(o,now); ev=byCode[k]={code:o.code,title:o.title||o.code,note:'',active:o.active,start:o.start,vias:o.via?o.via.split(/[,，、]/).map(x=>x.trim()).filter(Boolean):[],stops:[],src:S.id,unit:S.name,trust:S.trust!==false}; EVENTS.push(ev); }
       else { if(!ev.start&&o.start) ev.start=o.start; if(!ev.vias.length&&o.via) ev.vias=o.via.split(/[,，、]/).map(x=>x.trim()).filter(Boolean); }
       if(/^(否|n|no|0|x|停用|關)$/i.test(o.on)&&ev.stops.length) return;   // 第二列以後填「否」＝這一站暫不顯示
       if(o.place) ev.stops.push({place:o.place,old:o.old,note:o.note}); return; }
     o.active=rowActive(o,now);
-    if(o.type==='公告'){ if(o.active) NOTICES.push(o); } else if(o.type==='封閉'){ if(o.active&&closePlace(o.place)) CLOSED.push(o); } });
+    if(o.type==='公告'){ if(o.active){ o.unit=S.name; NOTICES.push(o); } } else if(o.type==='封閉'){ if(o.active&&S.trust!==false&&closePlace(o.place)) CLOSED.push(o); } });   /* v1.42 封閉路段只接受有進階權限的單位 */
+  });
   /* 核准過的班級連結：由伺服器只針對這一個代號放進來，不會出現在公開的活動清單 */
   if(BOOT&&BOOT.ev&&BOOT.ev.code){ const b=BOOT.ev; if(!EVENTS.some(e=>e.code.toLowerCase()===String(b.code).toLowerCase())) EVENTS.push({code:String(b.code),title:b.title||(/^m/i.test(String(b.code))?'會議地點':'班級教室'),note:'',active:!!b.active,priv:1,start:b.start||'',vias:Array.isArray(b.vias)?b.vias:[],stops:b.place?[{place:String(b.place),old:'',note:b.note||''}]:[]}); }
   eventsLoaded=true; renderNotice(); const er=document.getElementById('evRow'); if(er) er.innerHTML=evRowHTML();
   if(nav.to) showRoute(); if(pendingEvent){ const c=pendingEvent; pendingEvent=null; showEvent(c); } }
-const stopCell=p=>cells.find(x=> (x.slots||[]).includes(p) || (x.type==='hidden' ? (x.hcodes||[]).includes(p) : x.findable&&(x.token===p||x.codes.includes(p)||x.name===p)));   /* 位置代號（行政大樓2F#6）公開、未公開的格子都認得 */
-function revealStops(ev){ const multi=ev.stops.length>1; ev.stops.forEach(st=>{ const c=stopCell(st.place); if(c&&c.type==='hidden') c.revealName=(multi&&st.note)?st.note:ev.title; }); }   // 活動限時公開：只揭露活動指定的那幾間
+const stopCell=(p,ev)=>cells.find(x=> (x.type==='hidden'&&ev&&ev.trust===false) ? false : ((x.slots||[]).includes(p) || (x.type==='hidden' ? (x.hcodes||[]).includes(p) : x.findable&&(x.token===p||x.codes.includes(p)||x.name===p))));   /* v1.42 沒有進階權限的單位：未公開教室一律找不到 */   /* 位置代號（行政大樓2F#6）公開、未公開的格子都認得 */
+function revealStops(ev){ const multi=ev.stops.length>1; ev.stops.forEach(st=>{ const c=stopCell(st.place,ev); if(c&&c.type==='hidden') c.revealName=(multi&&st.note)?st.note:ev.title; }); }   // 活動限時公開：只揭露活動指定的那幾間
 function evBoxHTML(ev,compact){
-  const list=ev.stops.map((st,i)=>{ const c=stopCell(st.place); return '<li>'+(c?'<button class="chip" data-evstop="'+i+'">'+esc(displayName(c))+'</button>':'<span>'+esc(st.place)+'（不在這份地圖上）</span>')+
+  const list=ev.stops.map((st,i)=>{ const c=stopCell(st.place,ev); return '<li>'+(c?'<button class="chip" data-evstop="'+i+'">'+esc(displayName(c))+'</button>':'<span>'+esc(st.place)+'（不在這份地圖上）</span>')+
       (st.old?'<div class="chg">地點異動：原訂「'+esc(st.old)+'」，改至「'+esc(c?displayName(c):st.place)+'」</div>':'')+(st.note&&!compact?'<div class="nt2">'+esc(st.note)+'</div>':'')+'</li>'; }).join('');
   const multi=ev.stops.length>1, routed=!!(ev.start||ev.vias.length);
   const pnote=compact&&!multi&&ev.priv&&ev.stops[0]&&ev.stops[0].note?'<div class="nt2">'+esc(ev.stops[0].note)+'</div>':'';   /* 會議導引：時間和說明在路線卡上也要看得到 */
-  return '<div class="evbox"><div class="sub">'+(ev.priv&&/^m/i.test(ev.code)?'會議':'活動')+'</div><b>'+esc(ev.title)+'</b>'+pnote+(multi||!compact?'<ol class="evstops">'+list+'</ol>':(ev.stops[0]&&ev.stops[0].old?'<div class="chg">地點異動：原訂「'+esc(ev.stops[0].old)+'」</div>':''))+
+  return '<div class="evbox"><div class="sub">'+(ev.priv&&/^m/i.test(ev.code)?'會議':'活動')+(ev.unit&&SOURCES_LOADED.length>1?'・'+esc(ev.unit):'')+'</div><b>'+esc(ev.title)+'</b>'+pnote+(multi||!compact?'<ol class="evstops">'+list+'</ol>':(ev.stops[0]&&ev.stops[0].old?'<div class="chg">地點異動：原訂「'+esc(ev.stops[0].old)+'」</div>':''))+
     '<div class="row">'+((multi||routed)&&!compact?'<button class="btn" id="bEvRoute">'+(multi?'依序帶我走一遍':'顯示指定路線')+'</button>':'')+'<button class="btn ghost" id="bEvCopy">複製活動連結</button><button class="btn ghost" id="bEvQR">QR Code</button></div></div>'; }
-function evRoute(ev){ const toks=ev.stops.map(st=>{ const c=stopCell(st.place); return c?c.token:null; }).filter(Boolean); if(!toks.length) return false;
+function evRoute(ev){ const toks=ev.stops.map(st=>{ const c=stopCell(st.place,ev); return c?c.token:null; }).filter(Boolean); if(!toks.length) return false;
   const kf=(KIOSK&&KIOSK_FROM&&resolveNode(KIOSK_FROM))?KIOSK_FROM:null, st=kf||ev.start;   /* v1.41 展示模式：網址的 from 優先 */
   if(st&&resolveNode(st)){ nav.from=st; markStart(); }
   nav.event=ev; nav.vias=ev.vias.filter(v=>resolveNode(v)&&(!kf||/^T\d+$/.test(v))).concat(toks.slice(0,-1));   /* 起點換掉時，活動原本的入口途經點（G）略過，指定樓梯（T）保留 */ nav.to=toks[toks.length-1]; showRoute(); return true; }
-card.addEventListener('click',e=>{ const t=e.target.closest&&e.target.closest('[data-evstop]'), ev=nav.event||curEvent; if(t&&ev){ const c=stopCell(ev.stops[+t.dataset.evstop].place); if(c){ nav.event=null; selectRoom(c); card.insertAdjacentHTML('afterbegin','<button class="btn ghost" id="bEvBack">← 回到活動「'+esc(ev.title)+'」</button>'); card.querySelector('#bEvBack').addEventListener('click',()=>showEvent(ev.code)); } }
+card.addEventListener('click',e=>{ const t=e.target.closest&&e.target.closest('[data-evstop]'), ev=nav.event||curEvent; if(t&&ev){ const c=stopCell(ev.stops[+t.dataset.evstop].place,ev); if(c){ nav.event=null; selectRoom(c); card.insertAdjacentHTML('afterbegin','<button class="btn ghost" id="bEvBack">← 回到活動「'+esc(ev.title)+'」</button>'); card.querySelector('#bEvBack').addEventListener('click',()=>showEvent(ev.code)); } }
   const r=e.target.closest&&e.target.closest('#bEvRoute'); if(r&&curEvent) evRoute(curEvent);
   const eq=e.target.closest&&e.target.closest('#bEvQR'); if(eq&&(nav.event||curEvent)){ const ev3=nav.event||curEvent; showQR(linkFor('#e-'+ev3.code),ev3.title); }
   const cp=e.target.closest&&e.target.closest('#bEvCopy'); if(cp&&(nav.event||curEvent)){ const ev2=nav.event||curEvent, out=card.querySelector('#linkOut'), url=linkFor('#e-'+ev2.code); if(out){ out.hidden=false; out.value=url; out.select(); } try{ navigator.clipboard.writeText(url); }catch(_){} } });
@@ -1817,12 +1834,13 @@ function showEvent(code){ if(!eventsLoaded){ pendingEvent=code; return true; }
   const plain=(t,m)=>{ setCard(true); card.innerHTML='<div class="sub">活動</div><h2>'+esc(t)+'</h2><p>'+esc(m)+'</p><div class="row"><button class="btn ghost" id="bHome">回全校</button></div>'; card.querySelector('#bHome').addEventListener('click',()=>goHome()); return true; };
   if(!ev) return plain('找不到這個活動','活動代號「'+code+'」不存在，請向主辦單位確認連結。');
   if(!ev.active) return plain(ev.title,'這個活動連結目前沒有開放，可能尚未開始或已經結束。');
-  revealStops(ev); const ok=ev.stops.filter(st=>stopCell(st.place));
+  revealStops(ev); const ok=ev.stops.filter(st=>stopCell(st.place,ev));
   if(!ok.length) return plain(ev.title,'活動地點不在這份地圖上，請洽主辦單位。');
   if(ev.start||ev.vias.length||(KIOSK&&KIOSK_FROM)){ evRoute(ev); return true; }          // 有指定起點或途經：直接顯示整條路線
-  if(ev.stops.length>1){ nav.event=null; const c=stopCell(ok[0].place); selectRoom(c,{keepHash:true}); card.innerHTML=evBoxHTML(ev,false)+'<input id="linkOut" readonly hidden aria-label="分享連結">'; card.scrollTop=0; return true; }
-  const c=stopCell(ok[0].place); nav.event=null; selectRoom(c,{keepHash:true}); card.insertAdjacentHTML('afterbegin',evBoxHTML(ev,false)); card.scrollTop=0; return true; }
-card.addEventListener('click',e=>{ const t=e.target.closest&&e.target.closest('[data-ev]'); if(t) showEvent(t.dataset.ev); });
+  if(ev.stops.length>1){ nav.event=null; const c=stopCell(ok[0].place,ev); selectRoom(c,{keepHash:true}); card.innerHTML=evBoxHTML(ev,false)+'<input id="linkOut" readonly hidden aria-label="分享連結">'; card.scrollTop=0; return true; }
+  const c=stopCell(ok[0].place,ev); nav.event=null; selectRoom(c,{keepHash:true}); card.insertAdjacentHTML('afterbegin',evBoxHTML(ev,false)); card.scrollTop=0; return true; }
+card.addEventListener('click',e=>{ const t=e.target.closest&&e.target.closest('[data-ev]'); if(t) showEvent(t.dataset.ev);
+  const u=e.target.closest&&e.target.closest('[data-unit]'); if(u){ UNIT_FILTER=u.dataset.unit||''; const er=document.getElementById('evRow'); if(er) er.innerHTML=evRowHTML(); } });
 function pointCard(x,z,kind){ let best=null,bd=1e9; Object.keys(CODE).forEach(k=>{ if(k[0]!==kind) return; const n=CODE[k], d=Math.hypot(n.x-x,n.z-z); if(d<bd){bd=d;best=k;} });
   if(!best||bd>25) return; const n=CODE[best]; setCard(true); nav.event=null;
   card.innerHTML='<div class="sub">'+(kind==='G'?'入口／校門':'樓梯')+'　<span class="no">代號 '+best+'</span></div><h2>'+esc(String(n.name||'').replace(/^入口：/,''))+'</h2>'+
@@ -2337,7 +2355,23 @@ setTimeout(()=>{ try{ if(KIOSK) return; const QP=LATE_PARAMS||(BOOT&&BOOT.p)||{}
 setTimeout(()=>{ try{ const QP=LATE_PARAMS||(BOOT&&BOOT.p)||null, q=QP?{get:k=>QP[k]||null}:new URLSearchParams(location.search), H=location.hash||'';   /* 這一次是從哪裡打開的 */
   const ev=q.get('event')||q.get('e')||(H.match(/^#e-(.+)$/)||[])[1], from=q.get('from'), to=q.get('to')||(H.match(/^#r(.+)$/)||[])[1];
   logUse('開啟', KIOSK?'kiosk':(ev?decodeURIComponent(ev):(from&&!to?from:(to?'link':'direct'))), to?decodeURIComponent(to):''); }catch(e){} },2500);
-(async()=>{ let txt=DEFAULT_EVENTS_CSV; if(EVENTS_CSV_URL){ try{ const ctl=new AbortController(), tm=setTimeout(()=>ctl.abort(),7000); const r=await fetch(EVENTS_CSV_URL,{signal:ctl.signal,cache:'no-store'}); clearTimeout(tm); const t=await r.text(); if(r.ok&&t.indexOf('類型')>=0) txt=t; }catch(e){} } applyNotices(txt); })();
+(async()=>{   /* v1.42：先讀登記表，再同時讀每個來源的活動 CSV；登記表讀不到就只讀內建的科技中心 */
+  const get=async(url,need)=>{ try{ const ctl=new AbortController(), tm=setTimeout(()=>ctl.abort(),7000); const r=await fetch(url,{signal:ctl.signal,cache:'no-store'}); clearTimeout(tm); const t=await r.text(); return (r.ok&&t.indexOf(need)>=0)?t:null; }catch(e){ return null; } };
+  let srcs=DEFAULT_SOURCES.slice();
+  if(REGISTRY_CSV_URL){ const t=await get(REGISTRY_CSV_URL,'代號'); const reg=t?parseRegistry(t):[]; if(reg.length) srcs=reg; }
+  if(SRC_PARAM.length) srcs=srcs.filter(s=>SRC_PARAM.indexOf(s.id)>=0);
+  const parts=await Promise.all(srcs.map(async s=>{ let txt=s.url?await get(s.url,'類型'):null; if(txt==null&&s.id===DEFAULT_SOURCES[0].id) txt=DEFAULT_EVENTS_CSV; return {src:s,text:txt||''}; }));
+  applyNotices(parts); })();
+/* 登記表：找「代號」那一列當標題；只收啟用中、網址是 Google 試算表「發布到網路」CSV 的來源 */
+function parseRegistry(text){ const rows=parseCSV(text||''), hi=rows.findIndex(r=>(r[0]||'').trim()==='代號'); if(hi<0) return [];
+  const H=rows[hi].map(x=>String(x||'').trim()), col=n=>H.indexOf(n), out=[], seen={};
+  rows.slice(hi+1).forEach(r=>{ const g=n=>{ const i=col(n); return i<0?'':String(r[i]==null?'':r[i]).trim(); };
+    const id=g('代號').toLowerCase(), url=g('CSV網址');
+    if(!/^[a-z0-9_-]{1,20}$/.test(id)||seen[id]) return;
+    if(/^(否|n|no|0|x|停用|關)$/i.test(g('啟用'))) return;
+    if(!/^https:\/\/docs\.google\.com\/spreadsheets\/d\/e\/[\w-]+\/pub\?[^\s"'<>]*output=csv/.test(url)){ console.warn('登記表：'+id+' 的 CSV 網址格式不對，略過'); return; }
+    seen[id]=1; out.push({id, name:g('單位名稱')||id, url, trust:/^(是|y|yes|1|v|✓|✔)$/i.test(g('進階權限'))}); });
+  return out; }
 try{ if(window.google&&google.script&&google.script.url) google.script.url.getLocation(function(loc){ const P=(loc&&loc.parameter)||{}, had=BOOT&&BOOT.p&&(BOOT.p.to||BOOT.p.from);
   if(loc&&loc.hash){ fromLink('#'+loc.hash); } else if(!had&&(P.to||P.from)){ LATE_PARAMS=P; fromLink(); } }); }catch(e){}
 }
