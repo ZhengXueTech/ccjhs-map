@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>中正國中 活動介紹</title>
+<meta name="description" content="新北市立中正國民中學 活動介紹與 3D 校園導覽">
+<!--
+  中正國中 3D 校園導覽－活動介紹頁 event.html（v1，115.11.17）
+  網址：event.html?e=活動代號（也接受 event=）
+  - 左邊（手機在上面）嵌入 3D 地圖（embed=1，地圖需 v1.44 以上），右邊（手機在下面）是活動介紹，版面比照穿堂活動廣告牆
+  - 資料：先讀「資料來源登記表」，再讀每個單位的活動 CSV（和地圖 v1.42 相同）；登記表讀不到就只讀科技中心
+  - 狀態：公開中＝顯示介紹＋路線；結束 30 天內＝「活動已結束」；尚未開放、停用、找不到＝各自的說明
+  - 放在 GitHub 儲存庫 ccjhs-map 的根目錄（和 lobby.html 同一層）
+-->
+<style>
+:root{--navy:#0f2747;--navy2:#16355e;--gold:#f5c242;--ink:#eef3fa;--muted:#b7c6dc;--line:rgba(255,255,255,.14)}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--navy);color:var(--ink);font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif}
+#app{display:grid;grid-template-columns:minmax(0,2fr) minmax(320px,1fr);height:100vh;height:100dvh}
+#mapWrap{position:relative;background:#dfe6d6;min-height:0}
+#mapWrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+#mapMsg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#3b4a5e;font-size:15px}
+#side{display:flex;flex-direction:column;gap:14px;padding:26px 26px 18px;overflow:auto;min-height:0}
+#clock{align-self:flex-end;color:var(--muted);font-size:14px}
+.welcome{color:var(--gold);font-size:28px;font-weight:700;letter-spacing:1px;margin:0}
+h1{font-size:22px;line-height:1.45;margin:0;font-weight:700}
+.info{display:flex;flex-direction:column;gap:8px;font-size:18px}
+.info div{display:flex;gap:10px;align-items:flex-start;line-height:1.5}
+.info .ic{width:1.3em;flex:none;text-align:center}
+.info small{color:var(--muted);font-size:14px}
+.chg{background:rgba(245,194,66,.16);border:1px solid rgba(245,194,66,.5);color:#ffe3a1;border-radius:8px;padding:8px 10px;font-size:15px}
+.note{color:var(--ink);font-size:16px;line-height:1.7;white-space:pre-line;border-top:1px solid var(--line);padding-top:12px;margin:0}
+.unit{color:var(--muted);font-size:15px;margin-top:4px}
+.btns{display:grid;grid-template-columns:2fr 1fr;gap:10px;margin-top:auto}
+.btn{display:flex;align-items:center;justify-content:center;gap:6px;min-height:48px;padding:10px 12px;border-radius:10px;font-size:17px;font-weight:700;text-decoration:none;cursor:pointer;border:1px solid var(--line);background:var(--navy2);color:var(--ink);font-family:inherit}
+.btn.pri{background:var(--gold);color:#1d2430;border-color:var(--gold)}
+.btn.wide{grid-column:1/-1}
+#qrRow{display:flex;gap:14px;align-items:center;border-top:1px solid var(--line);padding-top:14px}
+#qrImg{width:112px;height:112px;background:#fff;border-radius:8px;padding:6px;flex:none}
+#qrImg img{width:100%;height:100%;display:block;image-rendering:pixelated}
+#qrRow b{display:block;font-size:17px}
+#qrRow span{color:var(--muted);font-size:14px}
+#foot{color:var(--muted);font-size:13px;text-align:center;border-top:1px solid var(--line);padding-top:10px}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#fff;color:#1d2430;padding:10px 16px;border-radius:10px;font-size:15px;box-shadow:0 4px 16px rgba(0,0,0,.25)}
+.state{font-size:17px;line-height:1.7;color:var(--ink);margin:0}
+.loading{color:var(--muted);font-size:16px}
+/* 手機直式：地圖在上、介紹在下，整頁捲動 */
+@media (max-width:820px),(orientation:portrait){
+  #app{display:block;height:auto}
+  #mapWrap{height:52vh;height:52svh;min-height:280px}
+  #side{padding:18px 18px calc(18px + env(safe-area-inset-bottom));overflow:visible}
+  #clock{display:none}
+  .welcome{font-size:16px;letter-spacing:0}
+  h1{font-size:21px}
+  .info{font-size:17px}
+  #qrRow{display:none}
+  .btns{margin-top:6px}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="mapWrap"><div id="mapMsg">地圖載入中…</div></div>
+  <div id="side" aria-live="polite">
+    <div id="clock"></div>
+    <p class="welcome">歡迎蒞臨中正國中</p>
+    <div id="body"><p class="loading">活動資料讀取中…</p></div>
+    <div id="foot">新北市立中正國民中學</div>
+  </div>
+</div>
+<div id="toast" hidden role="status"></div>
+
+<script>
+'use strict';
+/* ===================== 設定 ===================== */
+// 地圖資料夾（相對於這一頁）。測試期間用 beta/（v1.44 才有 embed=1）；12 月轉正式後改成 'map/'
+const MAP_DIR = 'beta/';
+// 「開始導航」開啟的完整地圖。轉正式後可改成短網址（Apps Script 版）
+const NAV_BASE = 'beta/';
+// 資料來源登記表（和地圖 v1.42 同一份）；讀不到就只讀科技中心
+const REGISTRY_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vREcXjYhWAkhIjp1veATAlGKRqiGbYPPoPwnqlAbvf-8mbAOISYgSWUFNFdNT47ErKpnDjVM_vgS2ar/pub?gid=1332490112&single=true&output=csv';
+const DEFAULT_SOURCES = [{id:'tc', name:'科技中心', url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vRucsaCd2t60pPOODwlRKr7Aral5MY2B8f0YxbRFVbRM33xvvldvldEfLlMGnMm5Lni8AhyWm7Ictr5/pub?gid=298651201&single=true&output=csv'}];
+// 教室配置圖（門牌 → 名稱），讀不到就直接顯示門牌
+const ROOMS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRucsaCd2t60pPOODwlRKr7Aral5MY2B8f0YxbRFVbRM33xvvldvldEfLlMGnMm5Lni8AhyWm7Ictr5/pub?gid=0&single=true&output=csv';
+const ENDED_DAYS = 30;          // 結束後幾天內顯示「活動已結束」，之後當作找不到
+const DEFAULT_FROM = 'G01';     // 活動沒有設定起點時，路線從正門出發
+
+/* ===================== 小工具 ===================== */
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const OFF = v => /^(否|n|no|0|x|停用|關)$/i.test(String(v || '').trim());
+const WD = '日一二三四五六';
+function parseCSV(text){ const rows=[]; let row=[], f='', q=false;
+  for(let i=0;i<text.length;i++){ const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){ f+='"'; i++; } else q=false; } else f+=c; }
+    else if(c==='"') q=true; else if(c===','){ row.push(f); f=''; }
+    else if(c==='\n'||c==='\r'){ if(c==='\r'&&text[i+1]==='\n') i++; row.push(f); rows.push(row); row=[]; f=''; }
+    else f+=c; }
+  if(f!==''||row.length){ row.push(f); rows.push(row); } return rows; }
+async function get(url, need){ try{ const ctl=new AbortController(), tm=setTimeout(()=>ctl.abort(),8000);
+  const r=await fetch(url,{signal:ctl.signal,cache:'no-store'}); clearTimeout(tm); const t=await r.text();
+  return (r.ok && t.indexOf(need)>=0) ? t : null; }catch(e){ return null; } }
+function toDate(v, end){ const m=String(v||'').trim().match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})(?:[ T](\d{1,2}):(\d{2}))?/); if(!m) return null;
+  return m[4]!=null ? new Date(+m[1],m[2]-1,+m[3],+m[4],+m[5]) : new Date(+m[1],m[2]-1,+m[3],end?23:0,end?59:0,end?59:0); }
+const md = d => (d.getMonth()+1)+'/'+d.getDate()+'（'+WD[d.getDay()]+'）';
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.hidden=false; clearTimeout(toast.tm); toast.tm=setTimeout(()=>t.hidden=true,2600); }
+
+/* 活動時間：L 欄三種格式；L 只有日期、F 說明寫的是時段（13:30-16:30）時，把時段接上去 */
+const TIME_RE=/^\s*(\d{1,2}:\d{2})\s*[-~～–—至到]\s*(\d{1,2}:\d{2})\s*$/;
+function whenText(L, F){
+  L=String(L||'').trim(); let m;
+  if((m=L.match(/^(\S+)\s*[~～]\s*(\S+)$/))){ const a=toDate(m[1]), b=toDate(m[2]); if(a&&b) return {date:md(a)+' ～ '+md(b), time:''}; }
+  if((m=L.match(/^(\d{4}[\/-]\d{1,2}[\/-]\d{1,2})(?:\s+(\d{1,2}:\d{2})\s*[-~～–—]\s*(\d{1,2}:\d{2}))?$/))){ const a=toDate(m[1]);
+    if(a){ let time=m[2]?m[2]+'–'+m[3]:''; const f=String(F||'').match(TIME_RE); if(!time&&f) time=f[1]+'–'+f[2]; return {date:md(a), time, usedF:!m[2]&&!!f}; } }
+  return null; }
+
+/* 配置圖：門牌＝樓層＋欄位數字（1F 列、36 欄＝136）。只收公開的名稱 */
+function parseRooms(text){ const map={}; let cols=null;
+  parseCSV(text||'').forEach(r=>{ const a=String(r[0]||'').trim();
+    if(/^【.+】$/.test(a)){ cols=r.map(x=>String(x||'').trim()); return; }
+    const fm=a.match(/^(\d)F$/); if(!fm||!cols) return;
+    r.forEach((v,i)=>{ if(!i) return; const n=String(cols[i]||'').match(/^\d{1,2}$/); const name=String(v||'').trim();
+      if(!n||!name||/未公開|^樓梯|^WC|^－$/.test(name)) return; map[fm[1]+n[0].padStart(2,'0')]=name; }); });
+  return map; }
+
+/* ===================== 讀資料 ===================== */
+const P = new URLSearchParams(location.search);
+const CODE = String(P.get('e') || P.get('event') || (location.hash.match(/^#e-(.+)$/)||[])[1] || '').trim();
+
+async function loadSources(){
+  let srcs = DEFAULT_SOURCES.slice();
+  const t = await get(REGISTRY_CSV_URL, '代號');
+  if(t){ const rows=parseCSV(t), hi=rows.findIndex(r=>String(r[0]||'').trim()==='代號');
+    if(hi>=0){ const H=rows[hi].map(x=>String(x||'').trim()), col=n=>H.indexOf(n), out=[], seen={};
+      rows.slice(hi+1).forEach(r=>{ const g=n=>{ const i=col(n); return i<0?'':String(r[i]==null?'':r[i]).trim(); };
+        const id=g('代號').toLowerCase(), url=g('CSV網址');
+        if(!/^[a-z0-9_-]{1,20}$/.test(id)||seen[id]||OFF(g('啟用'))) return;
+        if(!/^https:\/\/docs\.google\.com\/spreadsheets\/d\/e\/[\w-]+\/pub\?[^\s"'<>]*output=csv/.test(url)) return;
+        seen[id]=1; out.push({id, name:g('單位名稱')||id, url}); });
+      if(out.length) srcs=out; } }
+  return srcs; }
+
+/* 在某個來源的 CSV 裡找這個代號：回傳 {title, stops:[{place,old,note}], start, vias, G, H, on, L, F, extra} */
+function findEvent(text, code){
+  const rows=parseCSV(text||''), hi=rows.findIndex(r=>String(r[0]||'').trim()==='類型'); if(hi<0) return null;
+  const H=rows[hi].map(x=>String(x||'').trim()), col=n=>H.indexOf(n);
+  const g=(r,n)=>{ const i=col(n); return i<0?'':String(r[i]==null?'':r[i]).trim(); };
+  const mine=rows.slice(hi+1).filter(r=>g(r,'類型')==='活動'&&g(r,'代號').toLowerCase()===code.toLowerCase());
+  if(!mine.length) return null; const f=mine[0];
+  return { title:g(f,'標題'), start:g(f,'起點'), vias:g(f,'途經'), G:g(f,'開始'), H:g(f,'結束'), on:g(f,'啟用'), L:g(f,'活動時間'), F:g(f,'說明'),
+    host:g(f,'主辦單位')||g(f,'主辦'), signup:g(f,'報名連結'),
+    stops: mine.filter((r,i)=>i===0||!OFF(g(r,'啟用'))).map(r=>({place:g(r,'地點'), old:g(r,'原地點'), note:g(r,'說明')})) }; }
+
+/* ===================== 畫面 ===================== */
+function setMap(withEvent, ev){
+  const q=new URLSearchParams(); if(withEvent){ q.set('event',CODE); if(!ev.start&&!ev.vias) q.set('from',DEFAULT_FROM); }
+  q.set('embed','1'); q.set('q','std');
+  const f=document.createElement('iframe'); f.title='中正國中 3D 校園地圖'; f.src=MAP_DIR+'?'+q.toString(); f.setAttribute('allow','fullscreen');
+  f.addEventListener('load',()=>{ const m=$('#mapMsg'); if(m) m.remove(); });
+  $('#mapWrap').appendChild(f); }
+
+function stateView(title, msg){
+  $('#body').innerHTML=(title?'<h1>'+esc(title)+'</h1>':'')+'<p class="state">'+esc(msg)+'</p>'+
+    '<div class="btns"><a class="btn pri wide" href="'+esc(NAV_BASE)+'">打開 3D 校園地圖</a></div>';
+  setMap(false); }
+
+function placeText(p, rooms){
+  if(!p) return '';
+  if(/#/.test(p)) return '';                                   // 位置代號（未公開的房間）不直接顯示
+  if(/^\d{3}$/.test(p)&&rooms[p]) return rooms[p]+'（'+p+'）';
+  return p; }
+
+function render(ev, src, rooms){
+  document.title=ev.title+'｜中正國中';
+  const w=whenText(ev.L, ev.F), multi=ev.stops.length>1;
+  const places=ev.stops.map((s,i)=>{ const t=placeText(s.place,rooms)||'活動地點（見地圖）';
+    return '<div><span class="ic">📍</span><span>'+(multi?(i+1)+'. ':'')+esc(t)+(multi&&s.note?'<br><small>'+esc(s.note)+'</small>':'')+'</span></div>'; }).join('');
+  const chg=ev.stops.filter(s=>s.old).map(s=>'<div class="chg">地點異動：原訂「'+esc(placeText(s.old,rooms)||s.old)+'」，改至「'+esc(placeText(s.place,rooms)||'新地點')+'」</div>').join('');
+  const note=(!multi&&ev.F&&!(w&&w.usedF)&&!TIME_RE.test(ev.F))?ev.F:'';
+  const signup=/^https:\/\/\S+$/.test(ev.signup)?'<a class="btn wide" href="'+esc(ev.signup)+'" target="_blank" rel="noopener">報名表單</a>':'';
+  $('#body').innerHTML='<h1>'+esc(ev.title)+'</h1>'+
+    '<div class="info">'+(w?'<div><span class="ic">📅</span><span>'+esc(w.date)+'</span></div>'+(w.time?'<div><span class="ic">🕘</span><span>'+esc(w.time)+'</span></div>':''):'')+places+'</div>'+
+    chg+(note?'<p class="note">'+esc(note)+'</p>':'')+
+    '<div class="unit">主辦：'+esc(ev.host||src.name)+'</div>'+
+    '<div class="btns"><a class="btn pri" id="bNav" href="'+esc(NAV_BASE+'?event='+encodeURIComponent(CODE))+'">開始導航</a><button class="btn" id="bShare" type="button">分享</button>'+signup+'</div>'+
+    '<div id="qrRow"><div id="qrImg" aria-label="本頁 QR Code"></div><div><b>手機掃碼導航</b><span>掃描後在手機上看活動與路線</span></div></div>';
+  $('#bShare').addEventListener('click', share);
+  drawQR(pageURL());
+  setMap(true, ev); }
+
+function pageURL(){ return location.origin+location.pathname+'?e='+encodeURIComponent(CODE); }
+async function share(){ const url=pageURL(), title=document.title;
+  if(navigator.share){ try{ await navigator.share({title, url}); return; }catch(e){ if(e&&e.name==='AbortError') return; } }
+  try{ await navigator.clipboard.writeText(url); toast('已複製活動連結'); }catch(e){ toast(url); } }
+function drawQR(url){ const box=$('#qrImg'); if(!box||getComputedStyle($('#qrRow')).display==='none') return;
+  const go=()=>{ try{ const q=qrcode(0,'M'); q.addData(unescape(encodeURIComponent(url))); q.make(); box.innerHTML='<img alt="本頁 QR Code" src="'+q.createDataURL(8,0)+'">'; }catch(e){} };
+  if(window.qrcode) return go(); const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js'; s.onload=go; document.head.appendChild(s); }
+
+function tick(){ const d=new Date(); $('#clock').textContent=(d.getMonth()+1)+'/'+d.getDate()+'（週'+WD[d.getDay()]+'）'+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+tick(); setInterval(tick, 30000);
+
+(async()=>{
+  if(!CODE) return stateView('', '這個連結沒有帶活動代號。可以直接打開校園地圖找地點。');
+  const [srcs, roomsText] = await Promise.all([loadSources(), get(ROOMS_CSV_URL, 'F,')]);
+  const rooms = parseRooms(roomsText);
+  const texts = await Promise.all(srcs.map(s => get(s.url, '類型')));
+  if(texts.every(t => t == null)) return stateView('', '暫時讀不到活動資料，請稍後再重新整理一次。');
+  let ev=null, src=null; srcs.some((s,i)=>{ const e=findEvent(texts[i], CODE); if(e){ ev=e; src=s; } return !!e; });   // 代號重複時，登記表上面的單位優先（和地圖一致）
+  if(!ev) return stateView('', '找不到這個活動（代號「'+CODE+'」），請向主辦單位確認連結。');
+  const now=new Date(), a=toDate(ev.G,false), b=toDate(ev.H,true);
+  if(b && now>b){ const days=(now-b)/864e5;
+    return days<=ENDED_DAYS ? stateView(ev.title, '這個活動已經結束，謝謝您的關注。') : stateView('', '找不到這個活動（代號「'+CODE+'」），請向主辦單位確認連結。'); }
+  if(a && now<a) return stateView('', '這個活動還沒開放，請晚一點再打開這個連結。');
+  if(OFF(ev.on)) return stateView('', '這個活動連結目前沒有開放，請向主辦單位確認。');
+  render(ev, src, rooms);
+})();
+</script>
+</body>
+</html>
