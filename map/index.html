@@ -94,7 +94,7 @@ select{font:inherit;color:var(--ink);background:var(--chip);border:1px solid var
 @media (max-height:520px){ #floors{top:auto;bottom:calc(8px + env(safe-area-inset-bottom,0px));right:8px;transform:none;flex-direction:row;padding:3px} #floors button{padding:5px 7px;font-size:13px;min-width:34px}
   #dock{max-height:calc(100% - 70px);width:min(300px,46%);left:8px;bottom:8px} #card{padding:10px;gap:6px} #card h2{font-size:17px} #card .long{display:none} #brand span{display:none} #ver{display:none} #top{top:6px;left:8px;right:8px} #notice{top:52px} }
 @media (max-width:640px){ #brand span{display:none} #dock{max-height:40%} #ver{display:none}
-  #floors{top:112px;transform:none;padding:3px} #floors button{padding:5px 6px;font-size:13px;min-width:36px} #card .long{display:none} #card h2{font-size:18px} }
+  #floors{top:112px;bottom:auto;transform:none;padding:3px} #floors button{padding:5px 6px;font-size:13px;min-width:36px} #card .long{display:none} #card h2{font-size:18px} }
 
 /* 走走看（小人＋搖桿） */
 #walkBtn{padding:9px 13px;font-weight:700;font-size:14px;color:var(--ink);white-space:nowrap}
@@ -168,13 +168,16 @@ body.walking #gearBtn{display:none}
 .kiosk #gearBtn,.kiosk #searchWrap,.kiosk #walkQ,.kiosk #bCopy,.kiosk #bRouteCopy,.kiosk #bEvCopy,.kiosk #qrCopy,.kiosk #linkOut,.kiosk #tips,.kiosk #tipRing,.kiosk #bTips,.kiosk #gearTips{display:none!important}
 .kiosk #top{right:16px!important}
 .kiosk .row:has(> .sub:only-child){display:none}
+/* v1.44 嵌入模式（embed=1）：只留地圖、樓層、路線 */
+.embed #floors{top:8px!important;bottom:auto!important;right:8px!important;transform:none!important;flex-direction:column!important}   /* v1.45 */
+.embed #top,.embed #dock,.embed #gearBtn,.embed #gearBox,.embed #notice,.embed #ver,.embed #turnCard,.embed #tips,.embed #tipRing{display:none!important}
 </style>
 
 <canvas id="stage" aria-label="中正國中 3D 校園模型"></canvas>
 <div id="labels"></div>
 
 <div id="top">
-  <div id="brand" class="panel"><b>CAMPUS 3D v1.42 外賓版</b><span>新北市立中正國中・115 學年度教室位置</span></div>
+  <div id="brand" class="panel"><b>CAMPUS 3D v1.45 外賓版</b><span>新北市立中正國中・115 學年度教室位置</span></div>
   <button id="walkBtn" class="panel" title="用小人在校園裡走走看">走走看</button>
   <div id="searchWrap">
     <input id="q" type="search" autocomplete="off" placeholder="找地點：學務處、科技中心、圖書室、健康中心…" aria-label="搜尋教室或地點">
@@ -205,7 +208,7 @@ body.walking #gearBtn{display:none}
     <p class="hint soon">校內模式（用學校帳號看完整教室名稱）、管理入口：籌備中。</p>
   </details>
 </div></div>
-<div id="ver">CAMPUS 3D v1.42 外賓版・資料 115.08.19</div>
+<div id="ver">CAMPUS 3D v1.45 外賓版・資料 115.08.19</div>
 
 <script>/* Three.js r128（MIT License）內嵌 */
 /**
@@ -236,9 +239,10 @@ const PUBLIC_URL = '';
 const BOOT = /*__BOOT__*/null || window.__BOOT__ || null;
 /* v1.41 展示模式：網址加 kiosk=1（穿堂活動廣告牆用）。from＝起點（優先於活動的起點欄）；idle＝有人操作後閒置幾秒回到開啟畫面（預設 90，0＝不自動回） */
 const KQ=(()=>{ const P=(BOOT&&BOOT.p)||{}; let U; try{ U=new URLSearchParams(location.search); }catch(e){ U=new URLSearchParams(''); }
-  const g=k=>(P[k]!=null&&P[k]!=='')?String(P[k]):(U.get(k)||''); return {k:g('kiosk'),idle:g('idle'),from:g('from')}; })();
-const KIOSK=/^(1|true|yes|on)$/i.test(KQ.k), KIOSK_FROM=KIOSK?KQ.from:'', KIOSK_IDLE=(()=>{ const v=parseInt(KQ.idle,10); return isNaN(v)?90:Math.max(0,v); })();
+  const g=k=>(P[k]!=null&&P[k]!=='')?String(P[k]):(U.get(k)||''); return {k:g('kiosk'),idle:g('idle'),from:g('from'),em:g('embed')}; })();
+const KIOSK=/^(1|true|yes|on)$/i.test(KQ.k), EMBED=!KIOSK&&/^(1|true|yes|on)$/i.test(KQ.em), KIOSK_FROM=(KIOSK||EMBED)?KQ.from:'',   /* v1.44 嵌入模式（活動介紹頁） */ KIOSK_IDLE=(()=>{ const v=parseInt(KQ.idle,10); return isNaN(v)?90:Math.max(0,v); })();
 if(KIOSK) document.documentElement.classList.add('kiosk');
+if(EMBED) document.documentElement.classList.add('embed');
 /* v1.42 多單位：資料來源登記表（獨立試算表「資料來源」分頁發布成 CSV）。留空或讀不到＝只有下面內建的科技中心 */
 const REGISTRY_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vREcXjYhWAkhIjp1veATAlGKRqiGbYPPoPwnqlAbvf-8mbAOISYgSWUFNFdNT47ErKpnDjVM_vgS2ar/pub?gid=1332490112&single=true&output=csv';
 const DEFAULT_SOURCES = [{id:'tc', name:'科技中心', url:EVENTS_CSV_URL, trust:true}];
@@ -471,7 +475,7 @@ const FLOORNAME=l=>l===0?'B1':l+'F';
 /* ---------- 解析資料 → 格子清單 ---------- */
 const FLOORS=gridToFloors(CSV_TEXT, Object.fromEntries(BUILDINGS.filter(b=>b.b1codes).map(b=>[b.name+(b.part||''),true])));
 BUILDINGS.forEach(b=>{ b.floors=FLOORS[b.name+(b.part||'')]||{1:['（表格缺這一棟）']}; });
-document.getElementById('ver').textContent='CAMPUS 3D v1.42 外賓版・'+DATA_SOURCE+(IS_BETA?'・測試版':'');
+document.getElementById('ver').textContent='CAMPUS 3D v1.45 外賓版・'+DATA_SOURCE+(IS_BETA?'・測試版':'');
 window.__campus={get goal(){return goal;},get cells(){return cells;}};
 const cells=[];           // 所有格子
 BUILDINGS.forEach((b,bi)=>{
@@ -625,7 +629,8 @@ groundMats.push(campus.material, street.material); street.material.transparent=t
 const lot=flatShape([[245,262],[340,240],[352,300],[330,345],[350,385],[420,430],[430,480],[385,535],[398,575],[330,660],[285,735],[300,768],[380,780],[470,782],[495,835],[480,900],[390,912],[255,930],[220,925],[140,890],[215,700],[232,500],[238,350]],0xd9dbd8,0.03,{transparent:true}); groundMats.push(lot.material);
 const court=flatShape([[480,525],[1040,525],[1040,785],[480,785]],0xf0c4d4,0.04,{transparent:true}); groundMats.push(court.material);
 [[538,630,582,768],[634,725,582,768],[778,875,550,742],[879,975,550,742]].forEach(r=>{
-  const c=flatShape([[r[0],r[2]],[r[1],r[2]],[r[1],r[3]],[r[0],r[3]]],0x2fa85a,0.07,{transparent:true}); groundMats.push(c.material);});
+  const c=flatShape([[r[0],r[2]],[r[1],r[2]],[r[1],r[3]],[r[0],r[3]]],0x2fa85a,0.07,{transparent:true}); groundMats.push(c.material);
+  const ln=new THREE.LineSegments(new THREE.EdgesGeometry(c.geometry),new THREE.LineBasicMaterial({color:0xffffff,transparent:true})); ln.position.copy(c.position); ln.position.y+=0.03; scene.add(ln); groundMats.push(ln.material);});   /* v1.43 球場白線 */
 // 小型設施
 block(764,497,64,22,LIFT,0xe9e4d8);
 // 司令台兩側的無障礙坡道（正面是階梯）：從地面斜上到 1F 樓板
@@ -726,6 +731,9 @@ const EXTRA_TREES=[];
   let ar=0; for(let i=0;i<poly.length;i++){ const a=poly[i], b=poly[(i+1)%poly.length]; ar+=a[0]*b[1]-b[0]*a[1]; } const sg=ar>0?1:-1;
   const gates=[[765,792],[760,160],[1140,105],[400,908]].map(g=>P(g[0],g[1])), c0=P(480,525), c1=P(1040,785);
   window.__CAMPUS_POLY=poly;
+  { let cx=0,cz=0; poly.forEach(p=>{cx+=p[0];cz+=p[1];}); cx/=poly.length; cz/=poly.length; const sh=new THREE.Shape();   /* v1.43 圍牆外一圈人行道 */
+    poly.forEach((p,i)=>{ const dx=p[0]-cx, dz=p[1]-cz, L=Math.hypot(dx,dz)||1, k=(L+7)/L, x=cx+dx*k, z=cz+dz*k; i?sh.lineTo(x,-z):sh.moveTo(x,-z); });
+    const g=new THREE.ShapeGeometry(sh); g.rotateX(-Math.PI/2); const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:0xe6e2d8,transparent:true})); m.position.y=-0.02; m.receiveShadow=true; scene.add(m); groundMats.push(m.material); }
   for(let i=0;i<poly.length;i++){ const a=poly[i], b=poly[(i+1)%poly.length], L=Math.hypot(b[0]-a[0],b[1]-a[1]); if(L<6) continue;
     const ux=(b[0]-a[0])/L, uz=(b[1]-a[1])/L, nx=-uz*sg, nz=ux*sg;
     for(let s=4;s<L-4;s+=13){ const x=a[0]+ux*s+nx*5, z=a[1]+uz*s+nz*5;
@@ -810,6 +818,7 @@ const LOOK=(()=>{
     for(let i=0;i<1600;i++){ const v=170+Math.floor(r()*85); g.fillStyle='rgb('+v+','+v+','+v+')'; g.fillRect(Math.floor(r()*128),Math.floor(r()*128),2,2); }
     const tx=new THREE.CanvasTexture(c); tx.wrapS=tx.wrapT=THREE.RepeatWrapping; tx.repeat.set(0.18,0.18); return tx; })();
   const GROUND={0xcfe3a4:0x9cc46e, 0xd9dbd8:0xb9bcb6, 0xf0c4d4:0xbf8a74, 0x2fa85a:0x4f9566, 0x9aa3a6:0x8f989a};
+  const MAPG={0xcfe3a4:0xc9dba0, 0xf0c4d4:0xd7a593, 0x2fa85a:0x3d9a62, 0x9aa3a6:0xc9cbc6};   /* v1.43 地圖模式地面：草地柔和、球場周邊 PU 磚紅、校外淺灰 */
   /* 雲：幾團柔和的白色（只在平視出現） */
   const clouds=new THREE.Group();
   { const c=document.createElement('canvas'); c.width=c.height=128; const g=c.getContext('2d');
@@ -831,10 +840,12 @@ const LOOK=(()=>{
   wall.visible=false; scene.add(wall);
   let shadowReady=false;
   function apply(low){
-    if(low&&!shadowReady){ shadowReady=true; scene.traverse(o=>{ if(!o.isMesh) return; const m=o.material, basic=(Array.isArray(m)?m[0]:m)&&(Array.isArray(m)?m[0]:m).isMeshBasicMaterial; if(basic) return; o.castShadow=true; o.receiveShadow=true; }); }
-    sun.castShadow=low&&QUAL_LV[QUAL.lv].sh;
-    HEMI.color.set(low?0xdcecff:0xffffff); HEMI.groundColor.set(low?0x7f8f68:0x8a9a8a); HEMI.intensity=low?0.62:0.6;
-    sun.color.set(low?0xfff1dc:0xffffff); sun.intensity=low?0.62:0.42;
+    if(QUAL_LV[QUAL.lv].sh&&!shadowReady){ shadowReady=true; scene.traverse(o=>{ if(!o.isMesh) return; const m=o.material, basic=(Array.isArray(m)?m[0]:m)&&(Array.isArray(m)?m[0]:m).isMeshBasicMaterial; if(basic) return; o.castShadow=true; o.receiveShadow=true; }); }
+    sun.castShadow=QUAL_LV[QUAL.lv].sh;   /* v1.43 地圖模式也有投影（省電不開） */
+    { const sc=sun.shadow.camera, R=low?55:170, RZ=low?55:140; sc.left=-R; sc.right=R; sc.top=RZ; sc.bottom=-RZ; sc.near=low?10:20; sc.far=low?400:500; sc.updateProjectionMatrix();
+      sun.shadow.normalBias=low?0.03:0.06; if(!low){ sun.position.set(-150,120,110); sun.target.position.set(0,0,0); } }
+    HEMI.color.set(low?0xdcecff:0xe3efff); HEMI.groundColor.set(low?0x7f8f68:0x9aa78a); HEMI.intensity=low?0.62:0.58;
+    sun.color.set(low?0xfff1dc:0xfff0d8); sun.intensity=low?0.62:0.95;
     wall.visible=low; clouds.visible=low&&QUAL_LV[QUAL.lv].clouds;
     cells.forEach(c=>{ const m=c.mesh; if(!m||!m.isMesh||c.flat||c.walkway) return; c.mats=null; c.ghostMats=null;
       if(!c.mapMats) c.mapMats=m.material; if(!Array.isArray(c.mapMats)) return;
@@ -851,7 +862,7 @@ const LOOK=(()=>{
       /* v1.21 走走看：方塊撐滿一整層（樓板到樓板），不留縫；地圖模式恢復原樣 */
       if(c.mapY===undefined) c.mapY=m.position.y;
       if(low&&c.h>1){ const full=FH-0.02; m.scale.y=full/c.h; m.position.y=(c.y0-0.1)+full/2; if(c.wm>0.5) m.scale.x=(c.wm+0.02)/(c.wm-0.25); } else { m.scale.set(1,1,1); m.position.y=c.mapY; } });   /* 左右也補滿（教室之間的直縫） */
-    groundMats.forEach(m=>{ if(m.userData.c0===undefined) m.userData.c0=m.color.getHex(); const c0=m.userData.c0; m.color.setHex(low&&GROUND[c0]!==undefined?GROUND[c0]:c0);
+    groundMats.forEach(m=>{ if(m.userData.c0===undefined) m.userData.c0=m.color.getHex(); const c0=m.userData.c0; m.color.setHex(low?(GROUND[c0]!==undefined?GROUND[c0]:c0):(MAPG[c0]!==undefined?MAPG[c0]:c0));
       const isGrass=c0===0xcfe3a4; if(isGrass){ m.map=low?grass:null; m.needsUpdate=true; } });
   }
   const off=new THREE.Vector3(-60,110,80);
@@ -896,7 +907,7 @@ function bendBox(m,b,lx,ox,oz){ if(!b.bow) return; const g0=m.geometry, pa=g0.pa
   pos.needsUpdate=true; g.computeVertexNormals(); g.computeBoundingBox(); g.computeBoundingSphere(); }
 const pickable=[], CONCRETE=new THREE.MeshLambertMaterial({color:0xcfd4d2});   /* 走廊、轉角樓板、走道格統一用水泥色 */
 BUILDINGS.forEach(b=>{
-  b.roofs=[]; const roofMat=new THREE.MeshLambertMaterial({color:b.color});
+  b.roofs=[]; const roofMat=new THREE.MeshLambertMaterial({color:(()=>{ const c=new THREE.Color(b.color), h={}; c.getHSL(h); return c.setHSL(h.h,h.s*0.55,Math.min(0.72,h.l*0.9+0.12)); })()});   /* v1.43 屋頂降彩度 */
   b.cells.forEach(c=>{
     const top=new THREE.MeshLambertMaterial({map:topTexture(c)});
     const s=sideMat[c.type];
@@ -1235,7 +1246,7 @@ const q=document.getElementById('q'), resEl=document.getElementById('results');
 function hideResults(){ resEl.hidden=true; }
 /* 最近查過（存在這支手機，最多 6 個；未公開的格子不記） */
 function recentCells(){ let a=[]; try{ a=JSON.parse(localStorage.getItem('campus3d.recent')||'[]'); }catch(e){} return a.map(t=>cells.find(x=>x.findable&&(x.token===t||x.name===t))).filter(Boolean); }
-function rememberCell(c){ if(!c||!c.findable||KIOSK) return; try{ const t=stableTok(c); let a=JSON.parse(localStorage.getItem('campus3d.recent')||'[]').filter(x=>x!==t); a.unshift(t); localStorage.setItem('campus3d.recent',JSON.stringify(a.slice(0,6))); }catch(e){} }
+function rememberCell(c){ if(!c||!c.findable||KIOSK||EMBED) return; try{ const t=stableTok(c); let a=JSON.parse(localStorage.getItem('campus3d.recent')||'[]').filter(x=>x!==t); a.unshift(t); localStorage.setItem('campus3d.recent',JSON.stringify(a.slice(0,6))); }catch(e){} }
 /* 三步驟提示（v5.33；v5.34 改成函式，首頁「操作說明」可以再看） */
 function showTips(){ if(document.getElementById('tips')) return;
   const S=[['#q','🔍 在上方<b>搜尋</b>教室或地點，例如「圖書室」「科技中心」。'],[null,'📍 點選地點後按<b>「帶我去」</b>就會畫出路線；按<b>「從這裡出發」</b>可以換起點，教室到教室也行。'],['#walkBtn','🚶 按<b>「走走看」</b>，用小人跟著路線在校園裡走，轉彎會提醒你。']];
@@ -1821,7 +1832,7 @@ function evBoxHTML(ev,compact){
   return '<div class="evbox"><div class="sub">'+(ev.priv&&/^m/i.test(ev.code)?'會議':'活動')+(ev.unit&&SOURCES_LOADED.length>1?'・'+esc(ev.unit):'')+'</div><b>'+esc(ev.title)+'</b>'+pnote+(multi||!compact?'<ol class="evstops">'+list+'</ol>':(ev.stops[0]&&ev.stops[0].old?'<div class="chg">地點異動：原訂「'+esc(ev.stops[0].old)+'」</div>':''))+
     '<div class="row">'+((multi||routed)&&!compact?'<button class="btn" id="bEvRoute">'+(multi?'依序帶我走一遍':'顯示指定路線')+'</button>':'')+'<button class="btn ghost" id="bEvCopy">複製活動連結</button><button class="btn ghost" id="bEvQR">QR Code</button></div></div>'; }
 function evRoute(ev){ const toks=ev.stops.map(st=>{ const c=stopCell(st.place,ev); return c?c.token:null; }).filter(Boolean); if(!toks.length) return false;
-  const kf=(KIOSK&&KIOSK_FROM&&resolveNode(KIOSK_FROM))?KIOSK_FROM:null, st=kf||ev.start;   /* v1.41 展示模式：網址的 from 優先 */
+  const kf=(KIOSK_FROM&&resolveNode(KIOSK_FROM))?KIOSK_FROM:null, st=kf||ev.start;   /* v1.41 展示模式：網址的 from 優先 */
   if(st&&resolveNode(st)){ nav.from=st; markStart(); }
   nav.event=ev; nav.vias=ev.vias.filter(v=>resolveNode(v)&&(!kf||/^T\d+$/.test(v))).concat(toks.slice(0,-1));   /* 起點換掉時，活動原本的入口途經點（G）略過，指定樓梯（T）保留 */ nav.to=toks[toks.length-1]; showRoute(); return true; }
 card.addEventListener('click',e=>{ const t=e.target.closest&&e.target.closest('[data-evstop]'), ev=nav.event||curEvent; if(t&&ev){ const c=stopCell(ev.stops[+t.dataset.evstop].place,ev); if(c){ nav.event=null; selectRoom(c); card.insertAdjacentHTML('afterbegin','<button class="btn ghost" id="bEvBack">← 回到活動「'+esc(ev.title)+'」</button>'); card.querySelector('#bEvBack').addEventListener('click',()=>showEvent(ev.code)); } }
@@ -1836,7 +1847,7 @@ function showEvent(code){ if(!eventsLoaded){ pendingEvent=code; return true; }
   if(!ev.active) return plain(ev.title,'這個活動連結目前沒有開放，可能尚未開始或已經結束。');
   revealStops(ev); const ok=ev.stops.filter(st=>stopCell(st.place,ev));
   if(!ok.length) return plain(ev.title,'活動地點不在這份地圖上，請洽主辦單位。');
-  if(ev.start||ev.vias.length||(KIOSK&&KIOSK_FROM)){ evRoute(ev); return true; }          // 有指定起點或途經：直接顯示整條路線
+  if(ev.start||ev.vias.length||KIOSK_FROM){ evRoute(ev); return true; }          // 有指定起點或途經：直接顯示整條路線
   if(ev.stops.length>1){ nav.event=null; const c=stopCell(ok[0].place,ev); selectRoom(c,{keepHash:true}); card.innerHTML=evBoxHTML(ev,false)+'<input id="linkOut" readonly hidden aria-label="分享連結">'; card.scrollTop=0; return true; }
   const c=stopCell(ok[0].place,ev); nav.event=null; selectRoom(c,{keepHash:true}); card.insertAdjacentHTML('afterbegin',evBoxHTML(ev,false)); card.scrollTop=0; return true; }
 card.addEventListener('click',e=>{ const t=e.target.closest&&e.target.closest('[data-ev]'); if(t) showEvent(t.dataset.ev);
@@ -2349,12 +2360,12 @@ if(KIOSK){ let last=Date.now(), dirty=false, warned=false, ping=0;
 window.__campus.applyNotices=applyNotices; window.__campus.pointCard=pointCard; window.__campus.showEvent=showEvent;
 fromLink(); Object.assign(cam,goal); animate();
 /* 第一次開啟的三步驟提示：只在「直接打開」時自動出現，看過或略過就不再自動出現；首頁「操作說明」可以再看 */
-setTimeout(()=>{ try{ if(KIOSK) return; const QP=LATE_PARAMS||(BOOT&&BOOT.p)||{}, U=new URLSearchParams(location.search);
+setTimeout(()=>{ try{ if(KIOSK||EMBED) return; const QP=LATE_PARAMS||(BOOT&&BOOT.p)||{}, U=new URLSearchParams(location.search);
   if(QP.to||QP.from||QP.event||QP.e||U.get('to')||U.get('from')||U.get('event')||U.get('e')||location.hash.length>1) return;
   let seen=null; try{ seen=localStorage.getItem('campus3d.tips'); }catch(e){} if(!seen) showTips(); }catch(e){} },1200);
 setTimeout(()=>{ try{ const QP=LATE_PARAMS||(BOOT&&BOOT.p)||null, q=QP?{get:k=>QP[k]||null}:new URLSearchParams(location.search), H=location.hash||'';   /* 這一次是從哪裡打開的 */
   const ev=q.get('event')||q.get('e')||(H.match(/^#e-(.+)$/)||[])[1], from=q.get('from'), to=q.get('to')||(H.match(/^#r(.+)$/)||[])[1];
-  logUse('開啟', KIOSK?'kiosk':(ev?decodeURIComponent(ev):(from&&!to?from:(to?'link':'direct'))), to?decodeURIComponent(to):''); }catch(e){} },2500);
+  logUse('開啟', KIOSK?'kiosk':EMBED?'embed':(ev?decodeURIComponent(ev):(from&&!to?from:(to?'link':'direct'))), to?decodeURIComponent(to):''); }catch(e){} },2500);
 (async()=>{   /* v1.42：先讀登記表，再同時讀每個來源的活動 CSV；登記表讀不到就只讀內建的科技中心 */
   const get=async(url,need)=>{ try{ const ctl=new AbortController(), tm=setTimeout(()=>ctl.abort(),7000); const r=await fetch(url,{signal:ctl.signal,cache:'no-store'}); clearTimeout(tm); const t=await r.text(); return (r.ok&&t.indexOf(need)>=0)?t:null; }catch(e){ return null; } };
   let srcs=DEFAULT_SOURCES.slice();
