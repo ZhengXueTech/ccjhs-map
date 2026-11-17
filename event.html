@@ -6,7 +6,7 @@
 <title>中正國中 活動介紹</title>
 <meta name="description" content="新北市立中正國民中學 活動介紹與 3D 校園導覽">
 <!--
-  中正國中 3D 校園導覽－活動介紹頁 event.html（v1.1，115.11.17：QR 放大、帶你走到、留言板）
+  中正國中 3D 校園導覽－活動介紹頁 event.html（v1.2，115.11.17：QR 放大、帶你走到、留言板；讀不到資料自動重試一次）
   網址：event.html?e=活動代號（也接受 event=）
   - 左邊（手機在上面）嵌入 3D 地圖（embed=1，地圖需 v1.44 以上），右邊（手機在下面）是活動介紹，版面比照穿堂活動廣告牆
   - 資料：先讀「資料來源登記表」，再讀每個單位的活動 CSV（和地圖 v1.42 相同）；登記表讀不到就只讀科技中心
@@ -116,7 +116,7 @@ function parseCSV(text){ const rows=[]; let row=[], f='', q=false;
     else if(c==='\n'||c==='\r'){ if(c==='\r'&&text[i+1]==='\n') i++; row.push(f); rows.push(row); row=[]; f=''; }
     else f+=c; }
   if(f!==''||row.length){ row.push(f); rows.push(row); } return rows; }
-async function get(url, need){ try{ const ctl=new AbortController(), tm=setTimeout(()=>ctl.abort(),8000);
+async function get(url, need){ try{ const ctl=new AbortController(), tm=setTimeout(()=>ctl.abort(),12000);
   const r=await fetch(url,{signal:ctl.signal,cache:'no-store'}); clearTimeout(tm); const t=await r.text();
   return (r.ok && t.indexOf(need)>=0) ? t : null; }catch(e){ return null; } }
 function toDate(v, end){ const m=String(v||'').trim().match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})(?:[ T](\d{1,2}):(\d{2}))?/); if(!m) return null;
@@ -226,7 +226,8 @@ tick(); setInterval(tick, 30000);
   if(!CODE) return stateView('', '這個連結沒有帶活動代號。可以直接打開校園地圖找地點。');
   const [srcs, roomsText] = await Promise.all([loadSources(), get(ROOMS_CSV_URL, 'F,')]);
   const rooms = parseRooms(roomsText);
-  const texts = await Promise.all(srcs.map(s => get(s.url, '類型')));
+  let texts = await Promise.all(srcs.map(s => get(s.url, '類型')));
+  if(texts.every(t => t == null)){ await new Promise(r=>setTimeout(r,1500)); texts = await Promise.all(srcs.map(s => get(s.url, '類型'))); }   /* 網路慢或試算表剛重新發布：再試一次 */
   if(texts.every(t => t == null)) return stateView('', '暫時讀不到活動資料，請稍後再重新整理一次。');
   let ev=null, src=null; srcs.some((s,i)=>{ const e=findEvent(texts[i], CODE); if(e){ ev=e; src=s; } return !!e; });   // 代號重複時，登記表上面的單位優先（和地圖一致）
   if(!ev) return stateView('', '找不到這個活動（代號「'+CODE+'」），請向主辦單位確認連結。');
