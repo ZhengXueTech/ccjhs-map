@@ -6,7 +6,7 @@
 <title>中正國中 活動介紹</title>
 <meta name="description" content="新北市立中正國民中學 活動介紹與 3D 校園導覽">
 <!--
-  中正國中 3D 校園導覽－活動介紹頁 event.html（v1，115.11.17）
+  中正國中 3D 校園導覽－活動介紹頁 event.html（v1.1，115.11.17：QR 放大、帶你走到、留言板）
   網址：event.html?e=活動代號（也接受 event=）
   - 左邊（手機在上面）嵌入 3D 地圖（embed=1，地圖需 v1.44 以上），右邊（手機在下面）是活動介紹，版面比照穿堂活動廣告牆
   - 資料：先讀「資料來源登記表」，再讀每個單位的活動 CSV（和地圖 v1.42 相同）；登記表讀不到就只讀科技中心
@@ -32,15 +32,31 @@ h1{font-size:22px;line-height:1.45;margin:0;font-weight:700}
 .chg{background:rgba(245,194,66,.16);border:1px solid rgba(245,194,66,.5);color:#ffe3a1;border-radius:8px;padding:8px 10px;font-size:15px}
 .note{color:var(--ink);font-size:16px;line-height:1.7;white-space:pre-line;border-top:1px solid var(--line);padding-top:12px;margin:0}
 .unit{color:var(--muted);font-size:15px;margin-top:4px}
-.btns{display:grid;grid-template-columns:2fr 1fr;gap:10px;margin-top:auto}
+.btns{display:grid;grid-template-columns:2fr 1fr;gap:10px}
 .btn{display:flex;align-items:center;justify-content:center;gap:6px;min-height:48px;padding:10px 12px;border-radius:10px;font-size:17px;font-weight:700;text-decoration:none;cursor:pointer;border:1px solid var(--line);background:var(--navy2);color:var(--ink);font-family:inherit}
 .btn.pri{background:var(--gold);color:#1d2430;border-color:var(--gold)}
 .btn.wide{grid-column:1/-1}
-#qrRow{display:flex;gap:14px;align-items:center;border-top:1px solid var(--line);padding-top:14px}
-#qrImg{width:112px;height:112px;background:#fff;border-radius:8px;padding:6px;flex:none}
+/* 下方兩張卡：左 QR（白底，比照廣告牆）、右留言板（沒有留言就顯示校名） */
+#body{flex:1;display:flex;flex-direction:column;gap:14px;min-height:0}
+#bottom{margin-top:auto;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:14px;align-items:stretch}
+#qrCard{background:#fff;color:#1d2430;border-radius:14px;padding:14px 12px;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+#qrImg{width:100%;max-width:200px;aspect-ratio:1}
 #qrImg img{width:100%;height:100%;display:block;image-rendering:pixelated}
-#qrRow b{display:block;font-size:17px}
-#qrRow span{color:var(--muted);font-size:14px}
+#qrCard b{font-size:clamp(16px,1.25vw,24px)}
+#qrCard span{color:#5a6577;font-size:clamp(13px,.95vw,18px);line-height:1.4}
+#msgBox{background:var(--navy2);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;justify-content:center;gap:10px;min-height:120px;overflow:auto}
+#msgBox .school{font-size:clamp(17px,1.45vw,32px);font-weight:700;text-align:center;line-height:1.4}
+#msgBox .mh{color:var(--gold);font-size:14px;font-weight:700}
+#msgBox .m{background:rgba(255,255,255,.08);border-radius:10px;padding:8px 10px;font-size:clamp(15px,1.05vw,20px);line-height:1.6;white-space:pre-line}
+.has-bottom #foot{display:none}
+/* 大螢幕：字跟著畫面放大（比照廣告牆） */
+@media (min-width:821px) and (orientation:landscape){
+  .welcome{font-size:clamp(28px,2.6vw,56px)}
+  h1{font-size:clamp(22px,2vw,42px)}
+  .info{font-size:clamp(18px,1.45vw,30px)}
+  .unit,.note{font-size:clamp(15px,1.05vw,20px)}
+  #clock{font-size:clamp(14px,1.2vw,24px)}
+}
 #foot{color:var(--muted);font-size:13px;text-align:center;border-top:1px solid var(--line);padding-top:10px}
 #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#fff;color:#1d2430;padding:10px 16px;border-radius:10px;font-size:15px;box-shadow:0 4px 16px rgba(0,0,0,.25)}
 .state{font-size:17px;line-height:1.7;color:var(--ink);margin:0}
@@ -54,7 +70,9 @@ h1{font-size:22px;line-height:1.45;margin:0;font-weight:700}
   .welcome{font-size:16px;letter-spacing:0}
   h1{font-size:21px}
   .info{font-size:17px}
-  #qrRow{display:none}
+  #bottom{display:block} #qrCard{display:none} #msgBox{min-height:0;margin-top:2px}
+  #msgBox:has(.school){display:none}
+  .has-bottom #foot{display:block}
   .btns{margin-top:6px}
 }
 </style>
@@ -150,6 +168,7 @@ function findEvent(text, code){
   if(!mine.length) return null; const f=mine[0];
   return { title:g(f,'標題'), start:g(f,'起點'), vias:g(f,'途經'), G:g(f,'開始'), H:g(f,'結束'), on:g(f,'啟用'), L:g(f,'活動時間'), F:g(f,'說明'),
     host:g(f,'主辦單位')||g(f,'主辦'), signup:g(f,'報名連結'),
+    msgs:g(f,'留言').split(/\n|｜/).map(s=>s.trim()).filter(Boolean),   /* 留言板：主辦單位在「留言」欄寫的話，換行或｜分隔＝多則 */
     stops: mine.filter((r,i)=>i===0||!OFF(g(r,'啟用'))).map(r=>({place:g(r,'地點'), old:g(r,'原地點'), note:g(r,'說明')})) }; }
 
 /* ===================== 畫面 ===================== */
@@ -178,13 +197,16 @@ function render(ev, src, rooms){
     return '<div><span class="ic">📍</span><span>'+(multi?(i+1)+'. ':'')+esc(t)+(multi&&s.note?'<br><small>'+esc(s.note)+'</small>':'')+'</span></div>'; }).join('');
   const chg=ev.stops.filter(s=>s.old).map(s=>'<div class="chg">地點異動：原訂「'+esc(placeText(s.old,rooms)||s.old)+'」，改至「'+esc(placeText(s.place,rooms)||'新地點')+'」</div>').join('');
   const note=(!multi&&ev.F&&!(w&&w.usedF)&&!TIME_RE.test(ev.F))?ev.F:'';
+  const last=ev.stops[ev.stops.length-1]||{}, dest=(/^\d{3}$/.test(last.place)&&rooms[last.place])||placeText(last.place,rooms)||ev.title;   /* 帶你走到：有名稱用名稱，沒有就用門牌 */
   const signup=/^https:\/\/\S+$/.test(ev.signup)?'<a class="btn wide" href="'+esc(ev.signup)+'" target="_blank" rel="noopener">報名表單</a>':'';
   $('#body').innerHTML='<h1>'+esc(ev.title)+'</h1>'+
     '<div class="info">'+(w?'<div><span class="ic">📅</span><span>'+esc(w.date)+'</span></div>'+(w.time?'<div><span class="ic">🕘</span><span>'+esc(w.time)+'</span></div>':''):'')+places+'</div>'+
     chg+(note?'<p class="note">'+esc(note)+'</p>':'')+
     '<div class="unit">主辦：'+esc(ev.host||src.name)+'</div>'+
     '<div class="btns"><a class="btn pri" id="bNav" href="'+esc(NAV_BASE+'?event='+encodeURIComponent(CODE))+'">開始導航</a><button class="btn" id="bShare" type="button">分享</button>'+signup+'</div>'+
-    '<div id="qrRow"><div id="qrImg" aria-label="本頁 QR Code"></div><div><b>手機掃碼導航</b><span>掃描後在手機上看活動與路線</span></div></div>';
+    '<div id="bottom"><div id="qrCard"><div id="qrImg" aria-label="本頁 QR Code"></div><b>📱 手機掃碼導航</b><span>帶你走到<br>「'+esc(dest)+'」</span></div>'+
+    '<div id="msgBox">'+(ev.msgs.length?'<div class="mh">留言板</div>'+ev.msgs.map(m=>'<div class="m">'+esc(m)+'</div>').join(''):'<div class="school">新北市立中正國民中學</div>')+'</div></div>';
+  document.body.classList.add('has-bottom');
   $('#bShare').addEventListener('click', share);
   drawQR(pageURL());
   setMap(true, ev); }
@@ -193,8 +215,8 @@ function pageURL(){ return location.origin+location.pathname+'?e='+encodeURIComp
 async function share(){ const url=pageURL(), title=document.title;
   if(navigator.share){ try{ await navigator.share({title, url}); return; }catch(e){ if(e&&e.name==='AbortError') return; } }
   try{ await navigator.clipboard.writeText(url); toast('已複製活動連結'); }catch(e){ toast(url); } }
-function drawQR(url){ const box=$('#qrImg'); if(!box||getComputedStyle($('#qrRow')).display==='none') return;
-  const go=()=>{ try{ const q=qrcode(0,'M'); q.addData(unescape(encodeURIComponent(url))); q.make(); box.innerHTML='<img alt="本頁 QR Code" src="'+q.createDataURL(8,0)+'">'; }catch(e){} };
+function drawQR(url){ const box=$('#qrImg'); if(!box) return;
+  const go=()=>{ try{ const q=qrcode(0,'M'); q.addData(unescape(encodeURIComponent(url))); q.make(); box.innerHTML='<img alt="本頁 QR Code" src="'+q.createDataURL(10,0)+'">'; }catch(e){} };
   if(window.qrcode) return go(); const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js'; s.onload=go; document.head.appendChild(s); }
 
 function tick(){ const d=new Date(); $('#clock').textContent=(d.getMonth()+1)+'/'+d.getDate()+'（週'+WD[d.getDay()]+'）'+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
