@@ -6,7 +6,7 @@
 <title>中正國中 活動介紹</title>
 <meta name="description" content="新北市立中正國民中學 活動介紹與 3D 校園導覽">
 <!--
-  中正國中 3D 校園導覽－活動介紹頁 event.html（v1.2，115.11.17：QR 放大、帶你走到、留言板；讀不到資料自動重試一次）
+  中正國中 3D 校園導覽－活動介紹頁 event.html（v1.2 正式版，115.11.17：QR 放大、帶你走到、留言板；讀不到資料自動重試一次）
   網址：event.html?e=活動代號（也接受 event=）
   - 左邊（手機在上面）嵌入 3D 地圖（embed=1，地圖需 v1.44 以上），右邊（手機在下面）是活動介紹，版面比照穿堂活動廣告牆
   - 資料：先讀「資料來源登記表」，再讀每個單位的活動 CSV（和地圖 v1.42 相同）；登記表讀不到就只讀科技中心
@@ -92,10 +92,10 @@ h1{font-size:22px;line-height:1.45;margin:0;font-weight:700}
 <script>
 'use strict';
 /* ===================== 設定 ===================== */
-// 地圖資料夾（相對於這一頁）。測試期間用 beta/（v1.44 才有 embed=1）；12 月轉正式後改成 'map/'
-const MAP_DIR = 'beta/';
-// 「開始導航」開啟的完整地圖。轉正式後可改成短網址（Apps Script 版）
-const NAV_BASE = 'beta/';
+// 嵌入用的地圖資料夾（相對於這一頁）。正式＝map/（GitHub 靜態站，沒有 Apps Script 同時人數上限）；要測試新版改回 'beta/'
+const MAP_DIR = 'map/';
+// 「開始導航」開啟的完整地圖
+const NAV_BASE = './';   /* 正式：短網址（轉址頁 → Apps Script 版） */
 // 資料來源登記表（和地圖 v1.42 同一份）；讀不到就只讀科技中心
 const REGISTRY_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vREcXjYhWAkhIjp1veATAlGKRqiGbYPPoPwnqlAbvf-8mbAOISYgSWUFNFdNT47ErKpnDjVM_vgS2ar/pub?gid=1332490112&single=true&output=csv';
 const DEFAULT_SOURCES = [{id:'tc', name:'科技中心', url:'https://docs.google.com/spreadsheets/d/e/2PACX-1vRucsaCd2t60pPOODwlRKr7Aral5MY2B8f0YxbRFVbRM33xvvldvldEfLlMGnMm5Lni8AhyWm7Ictr5/pub?gid=298651201&single=true&output=csv'}];
