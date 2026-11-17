@@ -169,6 +169,7 @@ body.walking #gearBtn{display:none}
 .kiosk #top{right:16px!important}
 .kiosk .row:has(> .sub:only-child){display:none}
 /* v1.44 嵌入模式（embed=1）：只留地圖、樓層、路線 */
+.kiosk #bQk,.kiosk #advQuick,.embed #bQk{display:none!important}   /* v1.46 */
 .embed #floors{top:8px!important;bottom:auto!important;right:8px!important;transform:none!important;flex-direction:column!important}   /* v1.45 */
 .embed #top,.embed #dock,.embed #gearBtn,.embed #gearBox,.embed #notice,.embed #ver,.embed #turnCard,.embed #tips,.embed #tipRing{display:none!important}
 </style>
@@ -177,7 +178,7 @@ body.walking #gearBtn{display:none}
 <div id="labels"></div>
 
 <div id="top">
-  <div id="brand" class="panel"><b>CAMPUS 3D v1.45 外賓版</b><span>新北市立中正國中・115 學年度教室位置</span></div>
+  <div id="brand" class="panel"><b>CAMPUS 3D v1.46 外賓版</b><span>新北市立中正國中・115 學年度教室位置</span></div>
   <button id="walkBtn" class="panel" title="用小人在校園裡走走看">走走看</button>
   <div id="searchWrap">
     <input id="q" type="search" autocomplete="off" placeholder="找地點：學務處、科技中心、圖書室、健康中心…" aria-label="搜尋教室或地點">
@@ -201,6 +202,7 @@ body.walking #gearBtn{display:none}
   <section><h3>走走看的人物</h3><div class="seg" id="gearG"><button data-g="b">👦 男生</button><button data-g="g">👧 女生</button></div></section>
   <section><button class="btn ghost" id="gearTips">操作說明</button></section>
   <details id="gearAdv"><summary>進階模式</summary>
+    <a class="adv" id="advQuick" target="_blank" rel="noopener"><b>建立活動（不用登入）</b><span>給所有同仁：選地點、填日期，馬上拿到活動代碼、介紹頁和 QR Code</span></a>
     <p class="hint" id="advHas">由科技中心審核，核准後把連結寄到你的學校信箱（表單要用學校帳號登入）。</p>
     <a class="adv" id="advApply" target="_blank" rel="noopener"><b>向科技中心申請班級連結</b><span>給導師：家長或來賓打開連結，就導航到你的教室</span></a>
     <a class="adv" id="advMeet" target="_blank" rel="noopener"><b>向科技中心申請會議／活動導引</b><span>給行政夥伴：先在地圖上排好路線，複製路線連結貼進表單</span></a>
@@ -208,7 +210,7 @@ body.walking #gearBtn{display:none}
     <p class="hint soon">校內模式（用學校帳號看完整教室名稱）、管理入口：籌備中。</p>
   </details>
 </div></div>
-<div id="ver">CAMPUS 3D v1.45 外賓版・資料 115.08.19</div>
+<div id="ver">CAMPUS 3D v1.46 外賓版・資料 115.08.19</div>
 
 <script>/* Three.js r128（MIT License）內嵌 */
 /**
@@ -256,6 +258,8 @@ const FORM_LINKS = {apply:'', meet:''};
    送到 Apps Script（doPost）寫進母檔「使用紀錄」。GitHub 備援站（大活動用）固定每 10 次記 1 次，權重 10。 */
 const LOG_URL=(BOOT&&BOOT.log)||'https://script.google.com/macros/s/AKfycbywHUAVNsVKFqf7Ck7O4MN48qhLobw1CCzRf6f-q6SUQLX6b2KqpUKhGSxVhQkomoClxA/exec';
 const LOG_RATE=(BOOT&&BOOT.logRate>0)?Math.min(1,+BOOT.logRate):0.1;
+/* v1.46 快速建立活動（Apps Script 的 ?page=new）。地點卡片、⚙ 進階模式都有入口 */
+const QK_URL=LOG_URL+'?page=new';
 const LOG_ON=(!!BOOT||/github\.io$/.test(location.hostname))&&!/\/beta\//.test(location.pathname)&&Math.random()<LOG_RATE;   /* 只在正式網址記錄；離線檔、測試頁不記 */
 var LOG_N=0, LOG_SEEN={};
 function logUse(kind,src,place){ try{ if(!LOG_ON||LOG_N>=15) return; const k=kind+'|'+(src||'')+'|'+(place||''); if(LOG_SEEN[k]) return; LOG_SEEN[k]=1; LOG_N++;
@@ -475,7 +479,7 @@ const FLOORNAME=l=>l===0?'B1':l+'F';
 /* ---------- 解析資料 → 格子清單 ---------- */
 const FLOORS=gridToFloors(CSV_TEXT, Object.fromEntries(BUILDINGS.filter(b=>b.b1codes).map(b=>[b.name+(b.part||''),true])));
 BUILDINGS.forEach(b=>{ b.floors=FLOORS[b.name+(b.part||'')]||{1:['（表格缺這一棟）']}; });
-document.getElementById('ver').textContent='CAMPUS 3D v1.45 外賓版・'+DATA_SOURCE+(IS_BETA?'・測試版':'');
+document.getElementById('ver').textContent='CAMPUS 3D v1.46 外賓版・'+DATA_SOURCE+(IS_BETA?'・測試版':'');
 window.__campus={get goal(){return goal;},get cells(){return cells;}};
 const cells=[];           // 所有格子
 BUILDINGS.forEach((b,bi)=>{
@@ -1168,7 +1172,7 @@ function selectRoom(c,opts){
     '<div class="row"><span class="chip" style="border-color:'+TYPES[c.type].c+'">'+TYPES[c.type].label+'</span></div>'+
     ((opts&&opts.startHint)?'<p class="hint">已設為起點。在上方搜尋要去的地方，按「帶我去」。</p>':'')+
     '<div class="row"><button class="btn" id="bGo">帶我去</button>'+(c.node?'<button class="btn ghost" id="bFrom">'+(resolveNode(nav.from)===c.node?'✓ 目前起點':'從這裡出發')+'</button>':'')+'<button class="btn ghost" id="bVia">加為途經點</button></div>'+
-    '<div class="row"><button class="btn ghost" id="bCopy">複製這間的連結</button><button class="btn ghost" id="bQR">QR Code</button>'+(c.outdoor?'':'<button class="btn ghost" id="bBld">看整棟</button>')+'<button class="btn ghost" id="bHome">回全校</button>'+(c.outdoor?gmapBtn:'')+'</div>'+
+    '<div class="row"><button class="btn ghost" id="bCopy">複製這間的連結</button><button class="btn ghost" id="bQR">QR Code</button>'+(c.type==='hidden'?'':'<a class="btn ghost" id="bQk" target="_blank" rel="noopener" href="'+esc(QK_URL+'&place='+encodeURIComponent(stableTok(c)))+'">在這裡辦活動</a>')+(c.outdoor?'':'<button class="btn ghost" id="bBld">看整棟</button>')+'<button class="btn ghost" id="bHome">回全校</button>'+(c.outdoor?gmapBtn:'')+'</div>'+
     '<input id="linkOut" readonly hidden aria-label="分享連結">';
   card.querySelector('#bCopy').addEventListener('click',()=>copyLink(c));
   card.querySelector('#bQR').addEventListener('click',()=>showQR(shareURL(c),displayName(c)));
@@ -2326,7 +2330,7 @@ function gearSync(){ gearBox.querySelectorAll('#gearQ button').forEach(b=>b.setA
 function gearOpen(){ const F=Object.assign({},FORM_LINKS,(BOOT&&BOOT.forms)||{}); let any=false;
   [['advApply',F.apply],['advMeet',F.meet]].forEach(([id,u])=>{ const a=document.getElementById(id); if(u){ a.href=u; a.removeAttribute('aria-disabled'); any=true; } else { a.removeAttribute('href'); a.setAttribute('aria-disabled','true'); } });
   document.getElementById('advNone').hidden=any; document.getElementById('advHas').hidden=!any;
-  ['advApply','advMeet'].forEach(id=>{ document.getElementById(id).hidden=!any; }); gearBox.querySelector('.soon').hidden=!any; gearSync(); gearBox.hidden=false; document.getElementById('gearClose').focus(); }
+  ['advApply','advMeet'].forEach(id=>{ document.getElementById(id).hidden=!any; }); document.getElementById('advQuick').href=QK_URL; gearBox.querySelector('.soon').hidden=!any; gearSync(); gearBox.hidden=false; document.getElementById('gearClose').focus(); }
 function gearClose(){ gearBox.hidden=true; }
 document.getElementById('gearBtn').addEventListener('click',gearOpen);
 document.getElementById('gearClose').addEventListener('click',gearClose);
